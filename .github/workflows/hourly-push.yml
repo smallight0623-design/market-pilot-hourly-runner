@@ -57,7 +57,7 @@ jobs:
       - name: Verify application rules
         working-directory: app
         run: |
-          if ! node --test hourly/card-requests.test.mjs cloud-state/request-inbox.test.mjs cloud-state/retention.test.mjs hourly/expanded-budget.test.mjs configuration/*.test.mjs hourly/execution.test.mjs hourly/hourly.test.mjs hourly/storage-recovery.test.mjs hourly/item-isolation.test.mjs cloud-state/compression-budget.test.mjs hourly/discord.test.mjs hourly/gap-report.test.mjs resource-library/normalize-analysis.test.mjs vision-review/name-resolution.test.mjs vision-review/image-panels.test.mjs vision-review/relay-panels.test.mjs cloud-trial/stage1.test.mjs > "$RUNNER_TEMP/private-checks.log" 2>&1; then
+          if ! node --test favorites/*.test.mjs hourly/media-regression.test.mjs hourly/card-requests.test.mjs cloud-state/request-inbox.test.mjs cloud-state/retention.test.mjs hourly/expanded-budget.test.mjs configuration/*.test.mjs hourly/execution.test.mjs hourly/hourly.test.mjs hourly/storage-recovery.test.mjs hourly/item-isolation.test.mjs cloud-state/compression-budget.test.mjs hourly/discord.test.mjs hourly/gap-report.test.mjs resource-library/normalize-analysis.test.mjs vision-review/name-resolution.test.mjs vision-review/image-panels.test.mjs vision-review/relay-panels.test.mjs cloud-trial/stage1.test.mjs > "$RUNNER_TEMP/private-checks.log" 2>&1; then
             echo 'Application checks failed; stopped before business operations.'
             exit 1
           fi
@@ -84,3 +84,7 @@ jobs:
           DISCORD_WEBHOOK_URL_PRICING_GAPS: ${{ secrets.DISCORD_WEBHOOK_URL_PRICING_GAPS }}
           DISCORD_WEBHOOK_URL_RESOURCE_GAPS: ${{ secrets.DISCORD_WEBHOOK_URL_RESOURCE_GAPS }}
 
+          DISCORD_APPLICATION_ID: ${{ secrets.DISCORD_APPLICATION_ID }}
+          DISCORD_WEBHOOK_URL_APPLICATION: ${{ secrets.DISCORD_WEBHOOK_URL_APPLICATION }}
+          DISCORD_WEBHOOK_URL_501_1000_APPLICATION: ${{ secrets.DISCORD_WEBHOOK_URL_501_1000_APPLICATION }}
+          DISCORD_WEBHOOK_URL_1001_3000_APPLICATION: ${{ secrets.DISCORD_WEBHOOK_URL_1001_3000_APPLICATION }}
