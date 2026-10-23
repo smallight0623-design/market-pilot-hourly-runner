@@ -21,7 +21,7 @@ concurrency:
 jobs:
   hourly:
     runs-on: ubuntu-latest
-    timeout-minutes: 18
+    timeout-minutes: 38
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -82,3 +82,5 @@ jobs:
           DISCORD_WEBHOOK_URL_1001_3000: ${{ secrets.DISCORD_WEBHOOK_URL_1001_3000 }}
           DISCORD_WEBHOOK_URL_MODEL: ${{ secrets.DISCORD_WEBHOOK_URL_MODEL }}
           DISCORD_WEBHOOK_URL_PRICING_GAPS: ${{ secrets.DISCORD_WEBHOOK_URL_PRICING_GAPS }}
+          DISCORD_WEBHOOK_URL_RESOURCE_GAPS: ${{ secrets.DISCORD_WEBHOOK_URL_RESOURCE_GAPS }}
+
