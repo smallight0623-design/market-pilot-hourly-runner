@@ -57,7 +57,7 @@ jobs:
       - name: Verify application rules
         working-directory: app
         run: |
-          if ! node --test hourly/execution.test.mjs hourly/hourly.test.mjs hourly/storage-recovery.test.mjs cloud-state/compression-budget.test.mjs hourly/discord.test.mjs hourly/gap-report.test.mjs resource-library/normalize-analysis.test.mjs vision-review/name-resolution.test.mjs vision-review/image-panels.test.mjs vision-review/relay-panels.test.mjs cloud-trial/stage1.test.mjs > "$RUNNER_TEMP/private-checks.log" 2>&1; then
+          if ! node --test hourly/execution.test.mjs hourly/hourly.test.mjs hourly/storage-recovery.test.mjs hourly/item-isolation.test.mjs cloud-state/compression-budget.test.mjs hourly/discord.test.mjs hourly/gap-report.test.mjs resource-library/normalize-analysis.test.mjs vision-review/name-resolution.test.mjs vision-review/image-panels.test.mjs vision-review/relay-panels.test.mjs cloud-trial/stage1.test.mjs > "$RUNNER_TEMP/private-checks.log" 2>&1; then
             echo 'Application checks failed; stopped before business operations.'
             exit 1
           fi
