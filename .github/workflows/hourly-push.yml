@@ -93,6 +93,7 @@ jobs:
         working-directory: app
         run: node facebook/cloud-entry.mjs > "$RUNNER_TEMP/private-facebook-run.log" 2>&1
         env:
+          APPROVED_PACKAGE_SHA: ${{ vars.APPROVED_PACKAGE_SHA }}
           FB_OBSERVATION_TRIAL: ${{ vars.FB_OBSERVATION_TRIAL }}
           EXECUTION_MODE: ${{ inputs.execution_mode }}
           SCHEDULED_FOR: ${{ inputs.scheduled_for }}
