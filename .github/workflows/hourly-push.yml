@@ -1,107 +1,107 @@
-name: Hourly market monitor
-run-name: '${{ inputs.execution_mode }} / ${{ inputs.scheduled_for }} / ${{ inputs.dispatch_id }}'
-on:
-  workflow_dispatch:
-    inputs:
-      execution_mode:
-        type: choice
-        options: [hourly]
-        required: true
-      scheduled_for:
-        type: string
-        required: true
-      dispatch_id:
-        type: string
-        required: true
-permissions:
-  contents: read
-concurrency:
-  group: market-pilot-single-cloud-publisher
-  cancel-in-progress: false
-jobs:
-  hourly:
-    runs-on: ubuntu-latest
-    timeout-minutes: 55
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-      - name: Install locked bootstrap dependencies
-        run: npm ci --ignore-scripts --no-audit --no-fund > "$RUNNER_TEMP/bootstrap-install.log" 2>&1
-      - name: Read and verify approved private application
-        run: node bootstrap.mjs
-        env:
-          APPROVED_PACKAGE_SHA: ${{ vars.APPROVED_PACKAGE_SHA }}
-          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
-          R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
-          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
-      - name: Extract verified application safely
-        run: |
-          python - <<'PY'
-          import zipfile,pathlib
-          with zipfile.ZipFile('hourly-package.zip') as z:
-              assert sum(x.file_size for x in z.infolist()) <= 64*1024*1024
-              for x in z.infolist():
-                  p=pathlib.PurePosixPath(x.filename)
-                  assert not p.is_absolute() and '..' not in p.parts and chr(92) not in x.filename and ':' not in x.filename
-                  assert p.name != '.env' and (x.external_attr >> 16) & 0o170000 != 0o120000
-              z.extractall('app')
-          PY
-      - name: Install application dependencies
-        run: |
-          npm ci --prefix app/cloud-state --no-audit --no-fund > "$RUNNER_TEMP/storage-install.log" 2>&1
-          npm ci --prefix app/cloud-trial --no-audit --no-fund > "$RUNNER_TEMP/browser-install.log" 2>&1
-          cd app/cloud-trial
-          npx playwright install --with-deps chromium > "$RUNNER_TEMP/browser-setup.log" 2>&1
-      - name: Verify application rules
+name: Hourly market monitor
+run-name: '${{ inputs.execution_mode }} / ${{ inputs.scheduled_for }} / ${{ inputs.dispatch_id }}'
+on:
+  workflow_dispatch:
+    inputs:
+      execution_mode:
+        type: choice
+        options: [hourly]
+        required: true
+      scheduled_for:
+        type: string
+        required: true
+      dispatch_id:
+        type: string
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: market-pilot-single-cloud-publisher
+  cancel-in-progress: false
+jobs:
+  hourly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install locked bootstrap dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund > "$RUNNER_TEMP/bootstrap-install.log" 2>&1
+      - name: Read and verify approved private application
+        run: node bootstrap.mjs
+        env:
+          APPROVED_PACKAGE_SHA: ${{ vars.APPROVED_PACKAGE_SHA }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
+      - name: Extract verified application safely
+        run: |
+          python - <<'PY'
+          import zipfile,pathlib
+          with zipfile.ZipFile('hourly-package.zip') as z:
+              assert sum(x.file_size for x in z.infolist()) <= 64*1024*1024
+              for x in z.infolist():
+                  p=pathlib.PurePosixPath(x.filename)
+                  assert not p.is_absolute() and '..' not in p.parts and chr(92) not in x.filename and ':' not in x.filename
+                  assert p.name != '.env' and (x.external_attr >> 16) & 0o170000 != 0o120000
+              z.extractall('app')
+          PY
+      - name: Install application dependencies
+        run: |
+          npm ci --prefix app/cloud-state --no-audit --no-fund > "$RUNNER_TEMP/storage-install.log" 2>&1
+          npm ci --prefix app/cloud-trial --no-audit --no-fund > "$RUNNER_TEMP/browser-install.log" 2>&1
+          cd app/cloud-trial
+          npx playwright install --with-deps chromium > "$RUNNER_TEMP/browser-setup.log" 2>&1
+      - name: Verify application rules
+        working-directory: app
+        run: |
+          if ! node --test monitor-control.test.mjs facebook/*.test.mjs discord-routing/*.test.mjs cloud-state/card-placeholders.test.mjs cloud-state/retention-recovery.test.mjs hourly/refresh-cooldown.test.mjs resource-research/research.test.mjs hourly/list-coverage.test.mjs hourly/item-details.test.mjs favorites/*.test.mjs hourly/media-regression.test.mjs hourly/card-requests.test.mjs cloud-state/request-inbox.test.mjs cloud-state/retention.test.mjs hourly/expanded-budget.test.mjs configuration/*.test.mjs hourly/execution.test.mjs hourly/hourly.test.mjs hourly/analysis-preparation.test.mjs hourly/storage-recovery.test.mjs hourly/item-isolation.test.mjs cloud-state/compression-budget.test.mjs hourly/discord.test.mjs hourly/gap-report.test.mjs resource-library/normalize-analysis.test.mjs vision-review/name-resolution.test.mjs vision-review/image-panels.test.mjs vision-review/relay-panels.test.mjs cloud-trial/stage1.test.mjs > "$RUNNER_TEMP/private-checks.log" 2>&1; then
+            echo 'Application checks failed; stopped before business operations.'
+            exit 1
+          fi
+      - name: Collect and publish
+        working-directory: app
+        run: node hourly/main.mjs > "$RUNNER_TEMP/private-run.log" 2>&1
+        env:
+          EXECUTION_MODE: ${{ inputs.execution_mode }}
+          SCHEDULED_FOR: ${{ inputs.scheduled_for }}
+          DISPATCH_ID: ${{ inputs.dispatch_id }}
+          APPROVED_PACKAGE_SHA: ${{ vars.APPROVED_PACKAGE_SHA }}
+          HOURLY_MAX_DETAILS: ${{ vars.HOURLY_MAX_DETAILS }}
+          HOURLY_MAX_ANALYSES: ${{ vars.HOURLY_MAX_ANALYSES }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
+          RELAYROUTER_API_KEY: ${{ secrets.RELAYROUTER_API_KEY }}
+          AI_BASE_URL: https://api.relayrouter.ai/v1
+          AI_JSON_MODE: json_object
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DISCORD_WEBHOOK_URL_501_1000: ${{ secrets.DISCORD_WEBHOOK_URL_501_1000 }}
+          DISCORD_WEBHOOK_URL_1001_3000: ${{ secrets.DISCORD_WEBHOOK_URL_1001_3000 }}
+          DISCORD_WEBHOOK_URL_MODEL: ${{ secrets.DISCORD_WEBHOOK_URL_MODEL }}
+          DISCORD_WEBHOOK_URL_PRICING_GAPS: ${{ secrets.DISCORD_WEBHOOK_URL_PRICING_GAPS }}
+          DISCORD_WEBHOOK_URL_RESOURCE_GAPS: ${{ secrets.DISCORD_WEBHOOK_URL_RESOURCE_GAPS }}
+
+          DISCORD_APPLICATION_ID: ${{ secrets.DISCORD_APPLICATION_ID }}
+          DISCORD_ROUTING_KEY: ${{ secrets.DISCORD_ROUTING_KEY }}
+          DISCORD_WEBHOOK_URL_APPLICATION: ${{ secrets.DISCORD_WEBHOOK_URL_APPLICATION }}
+          DISCORD_WEBHOOK_URL_501_1000_APPLICATION: ${{ secrets.DISCORD_WEBHOOK_URL_501_1000_APPLICATION }}
+          DISCORD_WEBHOOK_URL_1001_3000_APPLICATION: ${{ secrets.DISCORD_WEBHOOK_URL_1001_3000_APPLICATION }}
+      - name: Facebook four-hour collection and pending continuation
         working-directory: app
-        run: |
-          if ! node --test monitor-control.test.mjs facebook/*.test.mjs discord-routing/*.test.mjs cloud-state/card-placeholders.test.mjs cloud-state/retention-recovery.test.mjs hourly/refresh-cooldown.test.mjs resource-research/research.test.mjs hourly/list-coverage.test.mjs hourly/item-details.test.mjs favorites/*.test.mjs hourly/media-regression.test.mjs hourly/card-requests.test.mjs cloud-state/request-inbox.test.mjs cloud-state/retention.test.mjs hourly/expanded-budget.test.mjs configuration/*.test.mjs hourly/execution.test.mjs hourly/hourly.test.mjs hourly/analysis-preparation.test.mjs hourly/storage-recovery.test.mjs hourly/item-isolation.test.mjs cloud-state/compression-budget.test.mjs hourly/discord.test.mjs hourly/gap-report.test.mjs resource-library/normalize-analysis.test.mjs vision-review/name-resolution.test.mjs vision-review/image-panels.test.mjs vision-review/relay-panels.test.mjs cloud-trial/stage1.test.mjs > "$RUNNER_TEMP/private-checks.log" 2>&1; then
-            echo 'Application checks failed; stopped before business operations.'
-            exit 1
-          fi
-      - name: Collect and publish
-        working-directory: app
-        run: node hourly/main.mjs > "$RUNNER_TEMP/private-run.log" 2>&1
+        run: node facebook/cloud-entry.mjs > "$RUNNER_TEMP/private-facebook-run.log" 2>&1
         env:
           EXECUTION_MODE: ${{ inputs.execution_mode }}
           SCHEDULED_FOR: ${{ inputs.scheduled_for }}
           DISPATCH_ID: ${{ inputs.dispatch_id }}
-          APPROVED_PACKAGE_SHA: ${{ vars.APPROVED_PACKAGE_SHA }}
-          HOURLY_MAX_DETAILS: ${{ vars.HOURLY_MAX_DETAILS }}
-          HOURLY_MAX_ANALYSES: ${{ vars.HOURLY_MAX_ANALYSES }}
           R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
           R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
           RELAYROUTER_API_KEY: ${{ secrets.RELAYROUTER_API_KEY }}
-          AI_BASE_URL: https://api.relayrouter.ai/v1
-          AI_JSON_MODE: json_object
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          DISCORD_WEBHOOK_URL_501_1000: ${{ secrets.DISCORD_WEBHOOK_URL_501_1000 }}
-          DISCORD_WEBHOOK_URL_1001_3000: ${{ secrets.DISCORD_WEBHOOK_URL_1001_3000 }}
-          DISCORD_WEBHOOK_URL_MODEL: ${{ secrets.DISCORD_WEBHOOK_URL_MODEL }}
-          DISCORD_WEBHOOK_URL_PRICING_GAPS: ${{ secrets.DISCORD_WEBHOOK_URL_PRICING_GAPS }}
-          DISCORD_WEBHOOK_URL_RESOURCE_GAPS: ${{ secrets.DISCORD_WEBHOOK_URL_RESOURCE_GAPS }}
-
-          DISCORD_APPLICATION_ID: ${{ secrets.DISCORD_APPLICATION_ID }}
-          DISCORD_ROUTING_KEY: ${{ secrets.DISCORD_ROUTING_KEY }}
-          DISCORD_WEBHOOK_URL_APPLICATION: ${{ secrets.DISCORD_WEBHOOK_URL_APPLICATION }}
-          DISCORD_WEBHOOK_URL_501_1000_APPLICATION: ${{ secrets.DISCORD_WEBHOOK_URL_501_1000_APPLICATION }}
-          DISCORD_WEBHOOK_URL_1001_3000_APPLICATION: ${{ secrets.DISCORD_WEBHOOK_URL_1001_3000_APPLICATION }}
-      - name: Facebook four-hour collection and pending continuation
-        working-directory: app
-        run: node facebook/cloud-entry.mjs > "$RUNNER_TEMP/private-facebook-run.log" 2>&1
-        env:
-          EXECUTION_MODE: ${{ inputs.execution_mode }}
-          SCHEDULED_FOR: ${{ inputs.scheduled_for }}
-          DISPATCH_ID: ${{ inputs.dispatch_id }}
-          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
-          R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
-          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
-          RELAYROUTER_API_KEY: ${{ secrets.RELAYROUTER_API_KEY }}
-          BRIGHTDATA_API_KEY: ${{ secrets.BRIGHTDATA_API_KEY }}
-          DISCORD_ROUTING_KEY: ${{ secrets.DISCORD_ROUTING_KEY }}
-          DISCORD_APPLICATION_ID: '1563256161707364382'
-
-
+          BRIGHTDATA_API_KEY: ${{ secrets.BRIGHTDATA_API_KEY }}
+          DISCORD_ROUTING_KEY: ${{ secrets.DISCORD_ROUTING_KEY }}
+          DISCORD_APPLICATION_ID: '1563256161707364382'
+
+
