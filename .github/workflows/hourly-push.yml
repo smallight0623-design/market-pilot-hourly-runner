@@ -21,7 +21,7 @@ concurrency:
 jobs:
   hourly:
     runs-on: ubuntu-latest
-    timeout-minutes: 38
+    timeout-minutes: 55
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -57,7 +57,7 @@ jobs:
       - name: Verify application rules
         working-directory: app
         run: |
-          if ! node --test discord-routing/*.test.mjs cloud-state/card-placeholders.test.mjs cloud-state/retention-recovery.test.mjs hourly/refresh-cooldown.test.mjs resource-research/research.test.mjs hourly/list-coverage.test.mjs hourly/item-details.test.mjs favorites/*.test.mjs hourly/media-regression.test.mjs hourly/card-requests.test.mjs cloud-state/request-inbox.test.mjs cloud-state/retention.test.mjs hourly/expanded-budget.test.mjs configuration/*.test.mjs hourly/execution.test.mjs hourly/hourly.test.mjs hourly/analysis-preparation.test.mjs hourly/storage-recovery.test.mjs hourly/item-isolation.test.mjs cloud-state/compression-budget.test.mjs hourly/discord.test.mjs hourly/gap-report.test.mjs resource-library/normalize-analysis.test.mjs vision-review/name-resolution.test.mjs vision-review/image-panels.test.mjs vision-review/relay-panels.test.mjs cloud-trial/stage1.test.mjs > "$RUNNER_TEMP/private-checks.log" 2>&1; then
+          if ! node --test facebook/*.test.mjs discord-routing/*.test.mjs cloud-state/card-placeholders.test.mjs cloud-state/retention-recovery.test.mjs hourly/refresh-cooldown.test.mjs resource-research/research.test.mjs hourly/list-coverage.test.mjs hourly/item-details.test.mjs favorites/*.test.mjs hourly/media-regression.test.mjs hourly/card-requests.test.mjs cloud-state/request-inbox.test.mjs cloud-state/retention.test.mjs hourly/expanded-budget.test.mjs configuration/*.test.mjs hourly/execution.test.mjs hourly/hourly.test.mjs hourly/analysis-preparation.test.mjs hourly/storage-recovery.test.mjs hourly/item-isolation.test.mjs cloud-state/compression-budget.test.mjs hourly/discord.test.mjs hourly/gap-report.test.mjs resource-library/normalize-analysis.test.mjs vision-review/name-resolution.test.mjs vision-review/image-panels.test.mjs vision-review/relay-panels.test.mjs cloud-trial/stage1.test.mjs > "$RUNNER_TEMP/private-checks.log" 2>&1; then
             echo 'Application checks failed; stopped before business operations.'
             exit 1
           fi
@@ -89,3 +89,19 @@ jobs:
           DISCORD_WEBHOOK_URL_APPLICATION: ${{ secrets.DISCORD_WEBHOOK_URL_APPLICATION }}
           DISCORD_WEBHOOK_URL_501_1000_APPLICATION: ${{ secrets.DISCORD_WEBHOOK_URL_501_1000_APPLICATION }}
           DISCORD_WEBHOOK_URL_1001_3000_APPLICATION: ${{ secrets.DISCORD_WEBHOOK_URL_1001_3000_APPLICATION }}
+      - name: Facebook four-hour collection and pending continuation
+        working-directory: app
+        run: node facebook/cloud-entry.mjs > "$RUNNER_TEMP/private-facebook-run.log" 2>&1
+        env:
+          EXECUTION_MODE: ${{ inputs.execution_mode }}
+          SCHEDULED_FOR: ${{ inputs.scheduled_for }}
+          DISPATCH_ID: ${{ inputs.dispatch_id }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
+          RELAYROUTER_API_KEY: ${{ secrets.RELAYROUTER_API_KEY }}
+          BRIGHTDATA_API_KEY: ${{ secrets.BRIGHTDATA_API_KEY }}
+          DISCORD_ROUTING_KEY: ${{ secrets.DISCORD_ROUTING_KEY }}
+          DISCORD_APPLICATION_ID: '1563256161707364382'
+
+
