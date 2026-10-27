@@ -92,7 +92,8 @@ jobs:
       - name: Facebook four-hour collection and pending continuation
         working-directory: app
         run: node facebook/cloud-entry.mjs > "$RUNNER_TEMP/private-facebook-run.log" 2>&1
-        env:
+        env:
+          FB_OBSERVATION_TRIAL: ${{ vars.FB_OBSERVATION_TRIAL }}
           EXECUTION_MODE: ${{ inputs.execution_mode }}
           SCHEDULED_FOR: ${{ inputs.scheduled_for }}
           DISPATCH_ID: ${{ inputs.dispatch_id }}
