@@ -12,8 +12,8 @@ export async function downloadBundle(env,{getObject,output='hourly-package.zip'}
  const config=bundleConfig(env);let client;
  try{
   if(!getObject){const {S3Client,GetObjectCommand}=await import('@aws-sdk/client-s3');client=new S3Client({endpoint:config.endpoint,region:'auto',forcePathStyle:true,maxAttempts:1,credentials:{accessKeyId:env.R2_ACCESS_KEY_ID,secretAccessKey:env.R2_SECRET_ACCESS_KEY},requestHandler:{requestTimeout:20000,connectionTimeout:10000}});getObject=()=>client.send(new GetObjectCommand({Bucket:config.bucket,Key:config.key}));}
-  const result=await getObject(config);if(result.ContentLength>2*1024*1024)throw Error('bundle_too_large');
-  const chunks=[];let length=0;for await(const b of result.Body){length+=b.length;if(length>2*1024*1024)throw Error('bundle_too_large');chunks.push(Buffer.from(b));}
+  const result=await getObject(config);if(result.ContentLength>8*1024*1024)throw Error('bundle_too_large');
+  const chunks=[];let length=0;for await(const b of result.Body){length+=b.length;if(length>8*1024*1024)throw Error('bundle_too_large');chunks.push(Buffer.from(b));}
   const bytes=Buffer.concat(chunks);if(crypto.createHash('sha256').update(bytes).digest('hex')!==config.sha)throw Error('bundle_checksum_failed');
   await fs.writeFile(output,bytes,{flag:'wx'});return {bytes:bytes.length};
  }finally{client?.destroy();}
