@@ -48,6 +48,20 @@ jobs:
                   assert p.name != '.env' and (x.external_attr >> 16) & 0o170000 != 0o120000
               z.extractall('app')
           PY
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: app/visual-pattern/requirements-linux.txt
+      - name: Install hash-locked local pattern matcher
+        run: python -m pip install --require-hashes -r app/visual-pattern/requirements-linux.txt > "$RUNNER_TEMP/pattern-install.log" 2>&1
+      - name: Verify local pattern bridge without AI or Discord
+        working-directory: app
+        run: |
+          if ! node visual-pattern/smoke.mjs > "$RUNNER_TEMP/pattern-smoke.log" 2>&1; then
+            echo 'Local pattern matcher verification failed before business work.'
+            exit 1
+          fi
       - name: Install application dependencies
         run: |
           npm ci --prefix app/cloud-state --no-audit --no-fund > "$RUNNER_TEMP/storage-install.log" 2>&1
@@ -72,7 +86,7 @@ jobs:
            yield JSON.stringify({event:'application_tests_finished',pass,fail,node:process.version})+'\n';
           }
           SAFE_REPORTER
-          if ! node --test --test-reporter="$RUNNER_TEMP/safe-test-reporter.mjs" public-ask.test.mjs monitor-control.test.mjs gifts/*.test.mjs facebook/*.test.mjs discord-routing/*.test.mjs cloud-state/card-placeholders.test.mjs cloud-state/retention-recovery.test.mjs hourly/refresh-cooldown.test.mjs resource-research/research.test.mjs hourly/list-coverage.test.mjs hourly/head-scan.test.mjs hourly/high-price-bands.test.mjs hourly/cleanup-control.test.mjs hourly/interleaved.test.mjs hourly/personal-mode.test.mjs hourly/item-details.test.mjs favorites/*.test.mjs hourly/media-regression.test.mjs hourly/card-requests.test.mjs cloud-state/request-inbox.test.mjs cloud-state/retention.test.mjs hourly/expanded-budget.test.mjs configuration/*.test.mjs hourly/execution.test.mjs hourly/hourly.test.mjs hourly/analysis-preparation.test.mjs hourly/storage-recovery.test.mjs hourly/item-isolation.test.mjs cloud-state/compression-budget.test.mjs hourly/discord.test.mjs hourly/gap-report.test.mjs resource-library/normalize-analysis.test.mjs resource-library/selected-scope.test.mjs vision-review/name-resolution.test.mjs vision-review/image-panels.test.mjs vision-review/relay-panels.test.mjs cloud-trial/stage1.test.mjs 2> "$RUNNER_TEMP/private-checks-stderr.log"; then
+          if ! node --test --test-reporter="$RUNNER_TEMP/safe-test-reporter.mjs" public-ask.test.mjs monitor-control.test.mjs gifts/*.test.mjs facebook/*.test.mjs discord-routing/*.test.mjs cloud-state/card-placeholders.test.mjs cloud-state/retention-recovery.test.mjs hourly/refresh-cooldown.test.mjs resource-research/research.test.mjs hourly/list-coverage.test.mjs hourly/head-scan.test.mjs hourly/high-price-bands.test.mjs hourly/cleanup-control.test.mjs hourly/interleaved.test.mjs hourly/personal-mode.test.mjs hourly/item-details.test.mjs favorites/*.test.mjs hourly/media-regression.test.mjs hourly/card-requests.test.mjs cloud-state/request-inbox.test.mjs cloud-state/retention.test.mjs hourly/expanded-budget.test.mjs configuration/*.test.mjs hourly/execution.test.mjs hourly/hourly.test.mjs hourly/analysis-preparation.test.mjs hourly/storage-recovery.test.mjs hourly/item-isolation.test.mjs cloud-state/compression-budget.test.mjs hourly/discord.test.mjs hourly/gap-report.test.mjs resource-library/normalize-analysis.test.mjs resource-library/selected-scope.test.mjs visual-pattern/pattern.test.mjs vision-review/name-resolution.test.mjs vision-review/image-panels.test.mjs vision-review/relay-panels.test.mjs cloud-trial/stage1.test.mjs 2> "$RUNNER_TEMP/private-checks-stderr.log"; then
             echo 'Application checks failed; stopped before business operations.'
             exit 1
           fi
@@ -136,6 +150,20 @@ jobs:
                   assert p.name != '.env' and (x.external_attr >> 16) & 0o170000 != 0o120000
               z.extractall('app')
           PY
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: app/visual-pattern/requirements-linux.txt
+      - name: Install hash-locked local pattern matcher
+        run: python -m pip install --require-hashes -r app/visual-pattern/requirements-linux.txt > "$RUNNER_TEMP/pattern-install.log" 2>&1
+      - name: Verify local pattern bridge without AI or Discord
+        working-directory: app
+        run: |
+          if ! node visual-pattern/smoke.mjs > "$RUNNER_TEMP/pattern-smoke.log" 2>&1; then
+            echo 'Local pattern matcher verification failed before business work.'
+            exit 1
+          fi
       - name: Install Facebook storage dependencies only
         run: npm ci --prefix app/cloud-state --ignore-scripts --no-audit --no-fund > "$RUNNER_TEMP/facebook-install.log" 2>&1
       - name: Verify Facebook rules
