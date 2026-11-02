@@ -1,0 +1,75 @@
+name: Currency isolated Linux validation
+run-name: Currency Linux 0745c68d
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts --no-audit --no-fund > "$RUNNER_TEMP/npm.log" 2>&1
+      - name: Read exact private validation bundle
+        run: node bootstrap.mjs
+        env:
+          APPROVED_PACKAGE_SHA: 0745c68d239a78e8dc47185e932a15d334091e3e5b92491abc2a156229b1f002
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
+      - name: Validate private archive paths
+        run: |
+          python - <<'PY'
+          import zipfile,pathlib
+          with zipfile.ZipFile('hourly-package.zip') as z:
+              assert len(z.infolist()) == 292
+              assert sum(x.file_size for x in z.infolist()) < 80*1024*1024
+              for x in z.infolist():
+                  p=pathlib.PurePosixPath(x.filename)
+                  assert not p.is_absolute() and '..' not in p.parts and chr(92) not in x.filename and ':' not in x.filename
+                  assert p.name != '.env' and (x.external_attr >> 16) & 0o170000 != 0o120000
+              z.extractall('app')
+          PY
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install hash-locked CPU engines
+        run: |
+          python -m pip install --no-deps --require-hashes -r app/visual-pattern/requirements-linux.txt -r app/currency-pattern/requirements-linux.txt > "$RUNNER_TEMP/ocr-install.log" 2>&1
+          npm ci --prefix app/cloud-state --ignore-scripts --no-audit --no-fund > "$RUNNER_TEMP/state-install.log" 2>&1
+          npm ci --prefix app/cloud-trial --ignore-scripts --no-audit --no-fund > "$RUNNER_TEMP/browser-install.log" 2>&1
+      - name: Unit tests without business credentials
+        working-directory: app
+        run: |
+          python -m unittest discover -s currency-pattern > "$RUNNER_TEMP/currency-tests.log" 2>&1
+          python -m unittest discover -s visual-pattern/engine > "$RUNNER_TEMP/grid-tests.log" 2>&1
+          node --input-type=module <<'JS'
+          import {spawnSync} from 'node:child_process';
+          const r=spawnSync(process.execPath,['--test'],{encoding:'utf8',maxBuffer:16*1024*1024,env:{PATH:process.env.PATH,HOME:process.env.HOME}});
+          const pass=r.stdout?.match(/^# pass (\d+)/m)?.[1],fail=r.stdout?.match(/^# fail (\d+)/m)?.[1];
+          console.log(JSON.stringify({event:'private_package_tests',pass:Number(pass??0),fail:Number(fail??0),exit:r.status}));
+          if(r.status!==0)process.exit(1);
+          JS
+      - name: Real image scan and OCR through production-style wrapper
+        working-directory: app
+        run: |
+          node --input-type=module <<'JS'
+          import fs from 'node:fs/promises';
+          import {runCurrencyMatch} from './currency-pattern/runtime.mjs';
+          const old=JSON.parse(await fs.readFile('.fixtures/regression-expected.json','utf8'));
+          const paths=['.fixtures/reference.png','.fixtures/echo.image',...old.images.map(r=>'.fixtures/'+r.sampleId+'.image')];
+          const images=await Promise.all(paths.map(async path=>({bytes:await fs.readFile(path)})));
+          const r=await runCurrencyMatch(images,{maxSeconds:180});
+          if(!r.coverageComplete||!r.ocrCoverageComplete||r.images.length!==11)throw Error('currency_image_coverage');
+          const expected=[{金幣:1000000,寶石:8479,點券:99},{金幣:28643,點券:42}];
+          for(let i=0;i<2;i++)for(const [name,value]of Object.entries(expected[i]))if(!r.images[i].matches.some(m=>m.name===name&&m.quantity?.value===value))throw Error('currency_positive_fixture_failed');
+          for(let i=0;i<old.images.length;i++){
+            const a=[...new Set(r.images[i+2].matches.map(m=>m.name))].sort(),b=[...new Set(old.images[i].matches.map(m=>m.name))].sort();
+            if(JSON.stringify(a)!==JSON.stringify(b))throw Error('currency_regression_name_change');
+          }
+          console.log(JSON.stringify({event:'linux_currency_fixture',status:'passed',images:r.images.length,positiveQuantities:5,regressionImages:9,seconds:r.seconds,networkCalls:r.networkCalls}));
+          JS
