@@ -1,0 +1,33 @@
+name: Isolated full frame verification
+on: workflow_dispatch
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install numpy==2.2.6 pillow==11.2.1 opencv-python-headless==4.11.0.86 boto3==1.40.69
+      - name: Read verified private test package
+        env:
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
+        shell: python
+        run: |
+          import boto3,os,hashlib,zipfile,io
+          sha='5cdb6950c0967da2563d664512758f38b25712e0842ce58e2f7f3c544dd59c98'
+          client=boto3.client('s3',endpoint_url=os.environ['R2_ENDPOINT'],aws_access_key_id=os.environ['R2_ACCESS_KEY_ID'],aws_secret_access_key=os.environ['R2_SECRET_ACCESS_KEY'],region_name='auto')
+          data=client.get_object(Bucket='market-pilot-state-trial',Key='i015-trial/hourly-live-v1/blobs/'+sha+'.blob')['Body'].read()
+          assert len(data)<40*1024*1024 and hashlib.sha256(data).hexdigest()==sha
+          with zipfile.ZipFile(io.BytesIO(data)) as archive:
+            assert all('/' not in name and '\\' not in name for name in archive.namelist())
+            archive.extractall('check')
+      - name: Run portable unit and acceptance checks
+        working-directory: check
+        run: |
+          python -m unittest test_matcher
+          python acceptance.py
