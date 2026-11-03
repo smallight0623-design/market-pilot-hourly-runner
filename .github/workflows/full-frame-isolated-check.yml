@@ -19,7 +19,7 @@ jobs:
         shell: python
         run: |
           import boto3,os,hashlib,zipfile,io
-          sha='5cdb6950c0967da2563d664512758f38b25712e0842ce58e2f7f3c544dd59c98'
+          sha='5898b524828343cb9c0d7b7b4d980b117c5703389d4cb20c4ec46a81ff0402aa'
           client=boto3.client('s3',endpoint_url=os.environ['R2_ENDPOINT'],aws_access_key_id=os.environ['R2_ACCESS_KEY_ID'],aws_secret_access_key=os.environ['R2_SECRET_ACCESS_KEY'],region_name='auto')
           data=client.get_object(Bucket='market-pilot-state-trial',Key='i015-trial/hourly-live-v1/blobs/'+sha+'.blob')['Body'].read()
           assert len(data)<40*1024*1024 and hashlib.sha256(data).hexdigest()==sha
