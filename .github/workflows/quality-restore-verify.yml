@@ -1,0 +1,74 @@
+name: Quality first recognition restore verification
+on: workflow_dispatch
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install boto3==1.40.69
+      - name: Read immutable release and frozen validation images
+        env:
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
+        shell: python
+        run: |
+          import boto3,os,hashlib,zipfile,io,pathlib,json
+          client=boto3.client('s3',endpoint_url=os.environ['R2_ENDPOINT'],aws_access_key_id=os.environ['R2_ACCESS_KEY_ID'],aws_secret_access_key=os.environ['R2_SECRET_ACCESS_KEY'],region_name='auto')
+          prefix='i015-trial/hourly-live-v1/'
+          artifacts={"quality-release.zip": {"sha256": "e67b70339fc8002bb3e163b47afc4caf1053f75d75f4c1ab9dd117d0d0baa930", "parts": ["85522d5474a1166040c9db55b842e29525480ad7dea9da00097eefbb07a260a7", "4aed88ffd652b189f1138fda37d7722ae86b70a5f053fe80911067ab29b7cef6"]}, "quality-validation.zip": {"sha256": "0f3a3827bddbbd6eb89197f66463351801b80c1cbe0e8bb49a35a49b7d674c9a", "parts": ["75c1c4707601570d8f9e266282ba185bbaedb6f34d92ca250de4df4fb840945b", "b1fd05254002e020432a966042042d966c1f6706ff51285bb3d1942e8261e2d4", "3c3391db161e50251133475a9e1f57142170cb7e25ba238920fe96a7575eee31"]}}
+          def get(key,sha,maximum):
+            data=client.get_object(Bucket='market-pilot-state-trial',Key=prefix+key)['Body'].read(maximum+1)
+            assert len(data)<=maximum and hashlib.sha256(data).hexdigest()==sha
+            return data
+          for name,artifact in artifacts.items():
+            data=b''.join(get('blobs/'+sha+'.blob',sha,5*1024*1024) for sha in artifact['parts'])
+            assert hashlib.sha256(data).hexdigest()==artifact['sha256']
+            with zipfile.ZipFile(io.BytesIO(data)) as archive:
+              assert sum(i.file_size for i in archive.infolist())<64*1024*1024
+              for name in archive.namelist():
+                p=pathlib.PurePosixPath(name)
+                assert not p.is_absolute() and '..' not in p.parts and chr(92) not in name and ':' not in name
+              archive.extractall('app')
+          # Also verify the whole release object used by the existing bootstrap.
+          sha=artifacts['quality-release.zip']['sha256']
+          get('blobs/'+sha+'.blob',sha,8*1024*1024)
+      - run: |
+          python -m pip install --no-deps --require-hashes -r app/visual-pattern/requirements-linux.txt -r app/currency-pattern/requirements-linux.txt
+          npm ci --prefix app/cloud-state --ignore-scripts --no-audit --no-fund
+          npm ci --prefix app/cloud-trial --ignore-scripts --no-audit --no-fund
+      - name: Exact package contracts and normal bootstrap smoke
+        working-directory: app
+        run: |
+          node --test > test-results.txt 2>&1 || { tail -90 test-results.txt; exit 1; }
+          tail -10 test-results.txt
+          node visual-pattern/smoke.mjs
+          node currency-pattern/smoke.mjs
+          cd visual-pattern/engine
+          python -m unittest test_matcher
+      - name: Install the preserved full catalog bank for real product verification
+        env:
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
+        shell: python
+        run: |
+          import boto3,os,json,hashlib,pathlib
+          client=boto3.client('s3',endpoint_url=os.environ['R2_ENDPOINT'],aws_access_key_id=os.environ['R2_ACCESS_KEY_ID'],aws_secret_access_key=os.environ['R2_SECRET_ACCESS_KEY'],region_name='auto')
+          bank=json.loads(pathlib.Path('app/.quality/documents.json').read_text())['library']['catalog']['featureBank']
+          for prop,extension,limit in [('metadataHash','.json',1024*1024),('npzHash','.npz',40*1024*1024)]:
+            sha=bank[prop]
+            data=client.get_object(Bucket='market-pilot-state-trial',Key='i015-trial/hourly-live-v1/console-catalog-v1/features/'+sha+extension)['Body'].read(limit+1)
+            assert len(data)<=limit and hashlib.sha256(data).hexdigest()==sha
+            pathlib.Path('app/visual-pattern/engine/reference-bank'+extension).write_bytes(data)
+      - name: Five merchant images and currency final-card checks
+        working-directory: app
+        run: node .quality/check.mjs
