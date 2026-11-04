@@ -1,0 +1,55 @@
+name: Approved catalog cleanup verification
+on: workflow_dispatch
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install boto3==1.40.69
+      - name: Read immutable validation inputs
+        env:
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
+        shell: python
+        run: |
+          import boto3,os,hashlib,zipfile,io,pathlib,json
+          client=boto3.client('s3',endpoint_url=os.environ['R2_ENDPOINT'],aws_access_key_id=os.environ['R2_ACCESS_KEY_ID'],aws_secret_access_key=os.environ['R2_SECRET_ACCESS_KEY'],region_name='auto')
+          prefix='i015-trial/hourly-live-v1/'
+          def get(key,sha,maximum):
+            data=client.get_object(Bucket='market-pilot-state-trial',Key=prefix+key)['Body'].read(maximum+1)
+            assert len(data)<=maximum and hashlib.sha256(data).hexdigest()==sha
+            return data
+          for sha,fixtures_only in [('2514fc10e815c677edbfc431e2cb84b930e12ce35275fbf57b346dccff226a59',False),('0910c71ac930334dfc0f83c8b4baaf9a7de5f648c362ceceed6e776bfd66f2b6',True),('e13580adff0d08b76f214a6ad01f488a2a598888b9127f999313a40cc4716c4f',False)]:
+            with zipfile.ZipFile(io.BytesIO(get('blobs/'+sha+'.blob',sha,40*1024*1024))) as archive:
+              for name in archive.namelist():
+                p=pathlib.PurePosixPath(name)
+                assert not p.is_absolute() and '..' not in p.parts and chr(92) not in name and ':' not in name
+                if not fixtures_only or name.startswith('.fixtures/'):archive.extract(name,'app')
+          root=pathlib.Path('app/.cleanup');old=json.loads((root/'live-config.private.json').read_text())['documents']['library']['catalog']['featureBank'];new=json.loads((root/'formal-documents.private.json').read_text())['library']['catalog']['featureBank']
+          for bank,folder,stem in [(old,root/'bank-engine','reference-bank'),(new,root,'built-bank')]:
+            folder.mkdir(exist_ok=True)
+            for prop,extension,maximum in [('metadataHash','.json',1024*1024),('npzHash','.npz',40*1024*1024)]:
+              sha=bank[prop];(folder/(stem+extension)).write_bytes(get('console-catalog-v1/features/'+sha+extension,sha,maximum))
+          (pathlib.Path('app')/'cleanup-check.mjs').write_bytes((root/'linux-check.mjs').read_bytes())
+      - run: |
+          python -m pip install --no-deps --require-hashes -r app/visual-pattern/requirements-linux.txt
+          npm ci --prefix app/cloud-state --ignore-scripts --no-audit --no-fund
+      - name: Catalog and recognition contract regression
+        working-directory: app
+        run: |
+          node --test catalog/*.test.mjs configuration/*.test.mjs visual-pattern/*.test.mjs resource-library/*.test.mjs > contract-results.txt 2>&1 || { tail -70 contract-results.txt; exit 1; }
+          tail -10 contract-results.txt
+          cd visual-pattern/engine
+          python -m unittest test_matcher
+      - name: Clean library and ten original product images
+        working-directory: app
+        run: node cleanup-check.mjs
