@@ -1,0 +1,68 @@
+name: Approved source-relative time repair
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        type: choice
+        options: [release]
+        required: true
+      note_sha:
+        type: string
+        required: true
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: market-pilot-explicit-release
+  cancel-in-progress: false
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: .github/workflows/hourly-push.yml
+      - run: npm ci --ignore-scripts --no-audit --no-fund > "$RUNNER_TEMP/bootstrap-install.log" 2>&1
+      - run: node bootstrap.mjs
+        env:
+          APPROVED_PACKAGE_SHA: 74220d5556b28f7b29b6ec605d52852c85cf803c30ddb966b491e6b50f678e26
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
+      - name: Verify complete immutable release
+        run: |
+          python - <<'PY'
+          import zipfile,pathlib,hashlib,json
+          with zipfile.ZipFile('hourly-package.zip') as z:
+              assert sum(i.file_size for i in z.infolist()) <= 192*1024*1024
+              for i in z.infolist():
+                  p=pathlib.PurePosixPath(i.filename)
+                  assert not p.is_absolute() and '..' not in p.parts and ':' not in i.filename and chr(92) not in i.filename
+                  assert p.name!='.env' and 'node_modules' not in p.parts
+                  assert (i.external_attr >> 16) & 0o170000 != 0o120000
+              z.extractall('app')
+          root=pathlib.Path('app');m=json.loads((root/'recognition-release-manifest.json').read_bytes())
+          for name,sha in m['files'].items():assert hashlib.sha256((root/name).read_bytes()).hexdigest()==sha
+          print('Immutable recognition release verified; original time and collection files preserved.')
+          PY
+          npm ci --prefix app/cloud-state --ignore-scripts --no-audit --no-fund > "$RUNNER_TEMP/storage-install.log" 2>&1
+          npm ci --prefix app/cloud-trial --no-audit --no-fund > "$RUNNER_TEMP/browser-install.log" 2>&1
+      - name: Verify source-relative time and independent gift rules
+        run: node --test app/cloud-trial/publication-time.test.mjs > "$RUNNER_TEMP/time-checks.log" 2>&1
+      - name: Apply explicitly approved CAS operation
+        run: node time-final-release.mjs
+        env:
+          RELEASE_OPERATION: ${{ inputs.operation }}
+          APPROVED_NOTE_SHA: ${{ inputs.note_sha }}
+          APPROVED_PACKAGE_SHA: 74220d5556b28f7b29b6ec605d52852c85cf803c30ddb966b491e6b50f678e26
+          GITHUB_TOKEN: ${{ github.token }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
