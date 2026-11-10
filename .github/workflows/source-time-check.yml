@@ -1,0 +1,51 @@
+name: Read-only source timestamp acceptance
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: node bootstrap.mjs
+        env:
+          APPROVED_PACKAGE_SHA: ${{ vars.APPROVED_PACKAGE_SHA }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
+      - name: Extract browser reader
+        run: |
+          python - <<'PY'
+          import zipfile,pathlib
+          with zipfile.ZipFile('hourly-package.zip') as z:
+              for i in z.infolist():
+                  p=pathlib.PurePosixPath(i.filename)
+                  assert not p.is_absolute() and '..' not in p.parts and ':' not in i.filename and chr(92) not in i.filename
+                  if p.parts[0]=='cloud-trial':z.extract(i,'app')
+          PY
+          npm ci --prefix app/cloud-trial --no-audit --no-fund
+          cd app/cloud-trial && npx playwright install --with-deps chromium
+      - name: Read one normal public list and at most two details
+        run: |
+          cat > inspect.mjs <<'JS'
+          import {chromium} from './app/cloud-trial/node_modules/playwright/index.mjs';
+          import {readPublicPage} from './app/cloud-trial/stage1.mjs';
+          const browser=await chromium.launch({headless:true});
+          try{
+           const context=await browser.newContext({locale:'zh-TW',timezoneId:'Asia/Taipei',viewport:{width:1280,height:900}}),page=await context.newPage();
+           const list=await readPublicPage(page,'https://www.8591.com.tw/v3/mall/list/21738?searchGame=21738&searchType=2&priceStart=500&priceEnd=1000&post_time_sort=1','list',async()=>{});
+           console.log(JSON.stringify({event:'timestamp_source_list',status:list.status,httpStatus:list.httpStatus}));
+           if(list.status==='readable')for(const item of list.listings.slice(0,2)){
+            const d=await readPublicPage(page,item.sourceUrl,'detail',async()=>{});
+            console.log(JSON.stringify({event:'timestamp_source_detail',id:item.id,status:d.status,httpStatus:d.httpStatus,visibleTime:d.text?.match(/刊登時間[^\n]*/)?.[0],publishedAt:d.facts?.publishedAt}));
+            if(d.status==='blocked')break;
+           }
+          }finally{await browser.close();}
+          JS
+          node inspect.mjs
