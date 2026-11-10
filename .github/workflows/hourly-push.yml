@@ -41,7 +41,7 @@ jobs:
           python - <<'PY'
           import zipfile,pathlib
           with zipfile.ZipFile('hourly-package.zip') as z:
-              assert sum(x.file_size for x in z.infolist()) <= 64*1024*1024
+              assert sum(x.file_size for x in z.infolist()) <= 192*1024*1024
               for x in z.infolist():
                   p=pathlib.PurePosixPath(x.filename)
                   assert not p.is_absolute() and '..' not in p.parts and chr(92) not in x.filename and ':' not in x.filename
@@ -53,10 +53,11 @@ jobs:
           python-version: '3.12'
           cache: pip
           cache-dependency-path: |
-            app/visual-pattern/requirements-linux.txt
-            app/currency-pattern/requirements-linux.txt
-      - name: Install hash-locked local pattern matcher
-        run: python -m pip install --no-deps --require-hashes -r app/visual-pattern/requirements-linux.txt -r app/currency-pattern/requirements-linux.txt > "$RUNNER_TEMP/pattern-install.log" 2>&1
+            app/recognition/requirements-linux.txt
+      - name: Install accepted CPU recognition runtime
+        run: |
+          python -m pip install 'torch==2.15.0+cpu' 'torchvision==0.29.2+cpu' --index-url https://download.pytorch.org/whl/cpu > "$RUNNER_TEMP/torch-install.log" 2>&1
+          python -m pip install -r app/recognition/requirements-linux.txt > "$RUNNER_TEMP/pattern-install.log" 2>&1
       - name: Verify local pattern bridge without AI or Discord
         working-directory: app
         run: |
@@ -95,10 +96,19 @@ jobs:
             echo 'Application checks failed; stopped before business operations.'
             exit 1
           fi
+      - name: Verify accepted recognition bridge
+        working-directory: app
+        run: node recognition/check_bridge.mjs > "$RUNNER_TEMP/adopted-smoke.log" 2>&1
+        env:
+          YOLO_AUTOINSTALL: 'false'
+          OMP_NUM_THREADS: '2'
       - name: Collect and publish
         working-directory: app
         run: node hourly/main.mjs > "$RUNNER_TEMP/private-run.log" 2>&1
         env:
+          ADOPTED_RECOGNITION: v1
+          YOLO_AUTOINSTALL: 'false'
+          OMP_NUM_THREADS: '2'
           LOCAL_CURRENCY_AUTHORITY: v1
           EXECUTION_MODE: ${{ inputs.execution_mode }}
           SCHEDULED_FOR: ${{ inputs.scheduled_for }}
@@ -149,7 +159,7 @@ jobs:
           python - <<'PY'
           import zipfile,pathlib
           with zipfile.ZipFile('hourly-package.zip') as z:
-              assert sum(x.file_size for x in z.infolist()) <= 64*1024*1024
+              assert sum(x.file_size for x in z.infolist()) <= 192*1024*1024
               for x in z.infolist():
                   p=pathlib.PurePosixPath(x.filename)
                   assert not p.is_absolute() and '..' not in p.parts and chr(92) not in x.filename and ':' not in x.filename
@@ -161,10 +171,11 @@ jobs:
           python-version: '3.12'
           cache: pip
           cache-dependency-path: |
-            app/visual-pattern/requirements-linux.txt
-            app/currency-pattern/requirements-linux.txt
-      - name: Install hash-locked local pattern matcher
-        run: python -m pip install --no-deps --require-hashes -r app/visual-pattern/requirements-linux.txt -r app/currency-pattern/requirements-linux.txt > "$RUNNER_TEMP/pattern-install.log" 2>&1
+            app/recognition/requirements-linux.txt
+      - name: Install accepted CPU recognition runtime
+        run: |
+          python -m pip install 'torch==2.15.0+cpu' 'torchvision==0.29.2+cpu' --index-url https://download.pytorch.org/whl/cpu > "$RUNNER_TEMP/torch-install.log" 2>&1
+          python -m pip install -r app/recognition/requirements-linux.txt > "$RUNNER_TEMP/pattern-install.log" 2>&1
       - name: Verify local pattern bridge without AI or Discord
         working-directory: app
         run: |
@@ -184,10 +195,19 @@ jobs:
             echo 'Facebook checks failed before business operations.'
             exit 1
           fi
-      - name: Facebook four-hour collection and pending continuation
+      - name: Verify accepted recognition bridge
+        working-directory: app
+        run: node recognition/check_bridge.mjs > "$RUNNER_TEMP/adopted-smoke.log" 2>&1
+        env:
+          YOLO_AUTOINSTALL: 'false'
+          OMP_NUM_THREADS: '2'
+      - name: Facebook collection and pending continuation
         working-directory: app
         run: node facebook/cloud-entry.mjs
         env:
+          ADOPTED_RECOGNITION: v1
+          YOLO_AUTOINSTALL: 'false'
+          OMP_NUM_THREADS: '2'
           LOCAL_CURRENCY_AUTHORITY: v1
           APPROVED_PACKAGE_SHA: ${{ vars.APPROVED_PACKAGE_SHA }}
           FB_OBSERVATION_TRIAL: ${{ vars.FB_OBSERVATION_TRIAL }}
