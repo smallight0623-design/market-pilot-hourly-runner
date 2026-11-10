@@ -5,6 +5,11 @@ on:
       bundle_sha:
         type: string
         required: true
+      scope:
+        type: choice
+        options: [core, application]
+        default: core
+        required: true
 permissions:
   contents: read
 jobs:
@@ -32,20 +37,26 @@ jobs:
       - name: Validate and extract feature assets
         run: |
           python - <<'PY'
-          import zipfile,pathlib,hashlib,json
+          import zipfile,pathlib,hashlib,json,os
+          scope=os.environ['VERIFY_SCOPE'];assert scope in ('core','application')
           with zipfile.ZipFile('hourly-package.zip') as z:
               assert sum(i.file_size for i in z.infolist()) < 192*1024*1024
               for i in z.infolist():
                   p=pathlib.PurePosixPath(i.filename)
-                  assert p.parts[0] in ('recognition','rank-recognition') and '..' not in p.parts
+                  assert (scope=='application' or p.parts[0] in ('recognition','rank-recognition')) and '..' not in p.parts
                   assert not p.is_absolute() and ':' not in i.filename and chr(92) not in i.filename
+                  assert p.name!='.env' and 'node_modules' not in p.parts
                   assert (i.external_attr >> 16) & 0o170000 != 0o120000
               z.extractall('verify')
           root=pathlib.Path('verify')
-          for name,sha in json.loads((root/'recognition/asset-manifest.json').read_bytes()).items():
+          manifest=json.loads((root/('recognition-release-manifest.json' if scope=='application' else 'recognition/asset-manifest.json')).read_bytes())
+          if scope=='application':manifest=manifest['files']
+          for name,sha in manifest.items():
               assert hashlib.sha256((root/name).read_bytes()).hexdigest()==sha
           print('Private feature asset checksums verified.')
           PY
+        env:
+          VERIFY_SCOPE: ${{ inputs.scope }}
       - name: Install matching CPU inference runtime
         run: |
           python -m pip install 'torch==2.15.0+cpu' 'torchvision==0.29.2+cpu' --index-url https://download.pytorch.org/whl/cpu
@@ -62,3 +73,38 @@ jobs:
           YOLO_AUTOINSTALL: 'false'
           OMP_NUM_THREADS: '2'
           PYTHONUTF8: '1'
+      - name: Install application test dependencies
+        if: inputs.scope == 'application'
+        run: |
+          npm ci --prefix verify/cloud-state --no-audit --no-fund
+          npm ci --prefix verify/cloud-trial --no-audit --no-fund
+      - name: Verify complete application and production Node Python bridge
+        if: inputs.scope == 'application'
+        working-directory: verify
+        run: |
+          cat > "$RUNNER_TEMP/app-test-reporter.mjs" <<'JS'
+          import {createHash} from 'node:crypto';
+          import {appendFile} from 'node:fs/promises';
+          export default async function* reporter(events){let pass=0,fail=0;for await(const e of events){if(e.type==='test:pass')pass++;if(e.type==='test:fail'){fail++;await appendFile(process.env.PRIVATE_TEST_FAILURE,JSON.stringify(e.data)+'\n');yield JSON.stringify({event:'test_failure',file:String(e.data.file??'').split('/').at(-1),testId:createHash('sha256').update(String(e.data.name)).digest('hex').slice(0,16)})+'\n';}}yield JSON.stringify({event:'full_application_tests',pass,fail})+'\n';}
+          JS
+          node --test --test-reporter="$RUNNER_TEMP/app-test-reporter.mjs" 2> "$RUNNER_TEMP/private-test-stderr.log"
+          node recognition/check_bridge.mjs
+        env:
+          PRIVATE_TEST_FAILURE: ${{ runner.temp }}/private-test-failures.jsonl
+          YOLO_AUTOINSTALL: 'false'
+          OMP_NUM_THREADS: '2'
+      - name: Preserve failed test details in existing private R2 only
+        if: failure() && inputs.scope == 'application'
+        run: |
+          cat > save-test-failure.mjs <<'JS'
+          import {readFile} from 'node:fs/promises';import {createHash} from 'node:crypto';import {S3Client,PutObjectCommand} from '@aws-sdk/client-s3';
+          let bytes;try{bytes=await readFile(process.env.PRIVATE_TEST_FAILURE);}catch{process.exit(0);}if(bytes.length>4*1024*1024)throw Error('test_log_limit');
+          const hash=createHash('sha256').update(bytes).digest('hex'),s3=new S3Client({endpoint:process.env.R2_ENDPOINT,region:'auto',forcePathStyle:true,credentials:{accessKeyId:process.env.R2_ACCESS_KEY_ID,secretAccessKey:process.env.R2_SECRET_ACCESS_KEY}});
+          try{await s3.send(new PutObjectCommand({Bucket:'market-pilot-state-trial',Key:'i015-trial/hourly-live-v1/blobs/'+hash+'.blob',Body:bytes,IfNoneMatch:'*'}));console.log(JSON.stringify({event:'private_test_failure_receipt',hash}));}finally{s3.destroy();}
+          JS
+          node save-test-failure.mjs
+        env:
+          PRIVATE_TEST_FAILURE: ${{ runner.temp }}/private-test-failures.jsonl
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
