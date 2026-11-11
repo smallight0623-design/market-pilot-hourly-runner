@@ -134,6 +134,13 @@ jobs:
           DISCORD_WEBHOOK_URL_APPLICATION: ${{ secrets.DISCORD_WEBHOOK_URL_APPLICATION }}
           DISCORD_WEBHOOK_URL_501_1000_APPLICATION: ${{ secrets.DISCORD_WEBHOOK_URL_501_1000_APPLICATION }}
           DISCORD_WEBHOOK_URL_1001_3000_APPLICATION: ${{ secrets.DISCORD_WEBHOOK_URL_1001_3000_APPLICATION }}
+      - name: Refresh fixed-week account search index (no AI or message delivery)
+        run: node search/publish-index.mjs
+        env:
+          APPROVED_PACKAGE_SHA: ${{ vars.APPROVED_PACKAGE_SHA }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
   facebook:
     concurrency:
       group: market-pilot-facebook-publisher
