@@ -1,11 +1,17 @@
 name: Browser dependency diagnosis
 on:
   workflow_dispatch:
+    inputs:
+      runner:
+        type: choice
+        options: [ubuntu-24.04, ubuntu-26.04]
+        default: ubuntu-24.04
+        required: true
 permissions:
   contents: read
 jobs:
   diagnose:
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner }}
     timeout-minutes: 18
     steps:
       - uses: actions/checkout@v4
