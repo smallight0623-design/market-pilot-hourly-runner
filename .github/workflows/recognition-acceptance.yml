@@ -14,7 +14,7 @@ permissions:
   contents: read
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
@@ -108,3 +108,9 @@ jobs:
           R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
           R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
+
+      - name: Verify installed Chrome before approving business runtime
+        if: inputs.scope == 'application'
+        working-directory: app
+        run: |
+          node --input-type=module -e "import {chromium} from './cloud-trial/node_modules/playwright/index.mjs';const b=await chromium.launch({channel:'chrome',headless:true,timeout:30000});const p=await b.newPage();await p.setContent('<title>browser-ready</title>');if(await p.title()!=='browser-ready')throw Error('browser_smoke');await b.close();console.log('Installed Chrome accepted.');"
