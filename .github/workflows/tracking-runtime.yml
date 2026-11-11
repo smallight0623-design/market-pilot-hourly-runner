@@ -32,7 +32,7 @@ jobs:
       - run: npm ci --ignore-scripts --no-audit --no-fund > "$RUNNER_TEMP/bootstrap-install.log" 2>&1
       - run: node bootstrap.mjs
         env:
-          APPROVED_PACKAGE_SHA: 33bc2f58136a96cf5191dec358bb9d7d12136570e4655201faac7c2057928e49
+          APPROVED_PACKAGE_SHA: 074b5c91365954d84d739991287149d9d01b8b598b0568deb37a635ff58dfa03
           R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
           R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
@@ -61,7 +61,7 @@ jobs:
         env:
           RELEASE_OPERATION: ${{ inputs.operation }}
           APPROVED_NOTE_SHA: ${{ inputs.note_sha }}
-          APPROVED_PACKAGE_SHA: 33bc2f58136a96cf5191dec358bb9d7d12136570e4655201faac7c2057928e49
+          APPROVED_PACKAGE_SHA: 074b5c91365954d84d739991287149d9d01b8b598b0568deb37a635ff58dfa03
           GITHUB_TOKEN: ${{ github.token }}
           R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
           R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
