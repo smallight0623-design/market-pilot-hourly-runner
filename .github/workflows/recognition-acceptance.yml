@@ -111,6 +111,7 @@ jobs:
 
       - name: Verify installed Chrome before approving business runtime
         if: inputs.scope == 'application'
-        working-directory: app
+        working-directory: verify
         run: |
           node --input-type=module -e "import {chromium} from './cloud-trial/node_modules/playwright/index.mjs';const b=await chromium.launch({channel:'chrome',headless:true,timeout:30000});const p=await b.newPage();await p.setContent('<title>browser-ready</title>');if(await p.title()!=='browser-ready')throw Error('browser_smoke');await b.close();console.log('Installed Chrome accepted.');"
+
