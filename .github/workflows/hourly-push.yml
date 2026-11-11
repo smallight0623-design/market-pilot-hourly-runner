@@ -20,7 +20,7 @@ jobs:
     concurrency:
       group: market-pilot-single-cloud-publisher
       cancel-in-progress: false
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 50
     steps:
       - uses: actions/checkout@v4
@@ -73,7 +73,7 @@ jobs:
           npm ci --prefix app/cloud-state --no-audit --no-fund > "$RUNNER_TEMP/storage-install.log" 2>&1
           npm ci --prefix app/cloud-trial --no-audit --no-fund > "$RUNNER_TEMP/browser-install.log" 2>&1
           cd app/cloud-trial
-          npx playwright install --with-deps chromium > "$RUNNER_TEMP/browser-setup.log" 2>&1
+          node --input-type=module -e "import {chromium} from 'playwright';const b=await chromium.launch({channel:'chrome',headless:true,timeout:30000});await b.close();console.log('Installed Chrome ready.');"
       - name: Verify application rules
         working-directory: app
         run: |
@@ -92,7 +92,7 @@ jobs:
            yield JSON.stringify({event:'application_tests_finished',pass,fail,node:process.version})+'\n';
           }
           SAFE_REPORTER
-          if ! node --test --test-reporter="$RUNNER_TEMP/safe-test-reporter.mjs" catalog/*.test.mjs currency-pattern/*.test.mjs estimation/*.test.mjs public-ask.test.mjs monitor-control.test.mjs gifts/*.test.mjs facebook/*.test.mjs discord-routing/*.test.mjs cloud-state/resource-display-regression.test.mjs cloud-state/card-placeholders.test.mjs cloud-state/retention-recovery.test.mjs hourly/refresh-cooldown.test.mjs resource-research/research.test.mjs hourly/list-coverage.test.mjs hourly/head-scan.test.mjs hourly/high-price-bands.test.mjs hourly/cleanup-control.test.mjs hourly/interleaved.test.mjs hourly/personal-mode.test.mjs hourly/item-details.test.mjs favorites/*.test.mjs hourly/media-regression.test.mjs hourly/card-requests.test.mjs cloud-state/request-inbox.test.mjs cloud-state/retention.test.mjs hourly/expanded-budget.test.mjs configuration/*.test.mjs hourly/execution.test.mjs hourly/hourly.test.mjs hourly/analysis-preparation.test.mjs hourly/storage-recovery.test.mjs hourly/item-isolation.test.mjs cloud-state/compression-budget.test.mjs hourly/discord.test.mjs hourly/gap-report.test.mjs resource-library/normalize-analysis.test.mjs resource-library/selected-scope.test.mjs visual-pattern/pattern.test.mjs vision-review/name-resolution.test.mjs vision-review/image-panels.test.mjs vision-review/relay-panels.test.mjs cloud-trial/stage1.test.mjs 2> "$RUNNER_TEMP/private-checks-stderr.log"; then
+          if ! node --test --test-reporter="$RUNNER_TEMP/safe-test-reporter.mjs" catalog/*.test.mjs currency-pattern/*.test.mjs estimation/*.test.mjs public-ask.test.mjs monitor-control.test.mjs gifts/*.test.mjs facebook/*.test.mjs discord-routing/*.test.mjs cloud-state/resource-display-regression.test.mjs cloud-state/card-placeholders.test.mjs cloud-state/retention-recovery.test.mjs hourly/browser-runtime.test.mjs hourly/refresh-cooldown.test.mjs resource-research/research.test.mjs hourly/list-coverage.test.mjs hourly/head-scan.test.mjs hourly/high-price-bands.test.mjs hourly/cleanup-control.test.mjs hourly/interleaved.test.mjs hourly/personal-mode.test.mjs hourly/item-details.test.mjs favorites/*.test.mjs hourly/media-regression.test.mjs hourly/card-requests.test.mjs cloud-state/request-inbox.test.mjs cloud-state/retention.test.mjs hourly/expanded-budget.test.mjs configuration/*.test.mjs hourly/execution.test.mjs hourly/hourly.test.mjs hourly/analysis-preparation.test.mjs hourly/storage-recovery.test.mjs hourly/item-isolation.test.mjs cloud-state/compression-budget.test.mjs hourly/discord.test.mjs hourly/gap-report.test.mjs resource-library/normalize-analysis.test.mjs resource-library/selected-scope.test.mjs visual-pattern/pattern.test.mjs vision-review/name-resolution.test.mjs vision-review/image-panels.test.mjs vision-review/relay-panels.test.mjs cloud-trial/stage1.test.mjs 2> "$RUNNER_TEMP/private-checks-stderr.log"; then
             echo 'Application checks failed; stopped before business operations.'
             exit 1
           fi
@@ -110,6 +110,7 @@ jobs:
           YOLO_AUTOINSTALL: 'false'
           OMP_NUM_THREADS: '2'
           LOCAL_CURRENCY_AUTHORITY: v1
+          MARKET_BROWSER_CHANNEL: chrome
           EXECUTION_MODE: ${{ inputs.execution_mode }}
           SCHEDULED_FOR: ${{ inputs.scheduled_for }}
           DISPATCH_ID: ${{ inputs.dispatch_id }}
