@@ -1,0 +1,28 @@
+name: Browser dependency diagnosis
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: node bootstrap.mjs
+        env:
+          APPROVED_PACKAGE_SHA: ${{ vars.APPROVED_PACKAGE_SHA }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
+      - run: python -c "import zipfile; zipfile.ZipFile('hourly-package.zip').extractall('app')"
+      - name: Diagnose public browser dependencies
+        run: |
+          npm ci --prefix app/cloud-state --no-audit --no-fund
+          npm ci --prefix app/cloud-trial --no-audit --no-fund
+          cd app/cloud-trial
+          npx playwright install --with-deps chromium
