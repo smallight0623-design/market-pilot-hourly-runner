@@ -2,6 +2,11 @@ name: Browser dependency diagnosis
 on:
   workflow_dispatch:
     inputs:
+      mode:
+        type: choice
+        options: [bundle, system_chrome]
+        default: bundle
+        required: true
       runner:
         type: choice
         options: [ubuntu-24.04, ubuntu-26.04]
@@ -31,4 +36,8 @@ jobs:
           npm ci --prefix app/cloud-state --no-audit --no-fund
           npm ci --prefix app/cloud-trial --no-audit --no-fund
           cd app/cloud-trial
-          npx playwright install --with-deps chromium
+          if [ "${{ inputs.mode }}" = system_chrome ]; then
+            node --input-type=module -e "import {chromium} from 'playwright';const b=await chromium.launch({channel:'chrome',headless:true});const p=await b.newPage();await p.setContent('<title>browser-ready</title>');if(await p.title()!=='browser-ready')throw Error('browser_smoke');console.log('SYSTEM_CHROME_BROWSER_SMOKE_PASSED');await b.close();"
+          else
+            npx playwright install --with-deps chromium
+          fi
