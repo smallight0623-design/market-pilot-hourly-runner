@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "id": "recognition-20261112-preserved",
+  "formal": {
+    "sha256": "6dcb7b3f126a7a917b9438a10b099e76f804928449c9797011037619cbc6cd87",
+    "bytes": 75870089,
+    "selectiveLocalAnalysisEnabled": false
+  },
+  "testedCandidate": {
+    "sha256": "0f067d3148040429eaae45ce89187088aca0fa45eb8410a9bf0302d62160fcaa",
+    "bytes": 75890112,
+    "selectiveLocalAnalysisEnabled": false,
+    "status": "offline-tested-not-production-approved",
+    "privateReadbackVerifiedAt": "2026-11-12T14:55:50.401Z"
+  },
+  "artifactLocation": "existing private application-bundle storage; no public artifacts",
+  "rollbackScope": "application code only; preserve current state/configuration/source records/pricing and delivery receipts",
+  "pushChangesProduction": false
+}
