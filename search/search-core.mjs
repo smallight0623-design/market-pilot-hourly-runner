@@ -1,6 +1,7 @@
 // Read-only query core; canonical projections must be supplied by a source-bound adapter.
-export const weeklyStart='2026-11-11T16:00:00.000Z';
-export function searchAccounts(rows,filters={},window={start:weeklyStart,end:'2026-11-18T16:00:00.000Z'}){
+export const weekMs=7*24*60*60*1000;
+export function rollingWindow(now=Date.now()){if(!Number.isFinite(now))throw Error('invalid_query_time');return{start:new Date(now-weekMs).toISOString(),end:new Date(now).toISOString()};}
+export function searchAccounts(rows,filters={},window=rollingWindow()){
  const start=Date.parse(window.start),end=Date.parse(window.end);if(!Number.isFinite(start)||!Number.isFinite(end)||start>=end)throw Error('invalid_window');
  const minWin=filters.minWinRate??null;if(minWin!==null&&(!Number.isFinite(minWin)||minWin<0||minWin>100))throw Error('invalid_win_rate');
  const required=[...new Set(filters.skinIds??[])];if(required.some(id=>typeof id!=='string'||!id))throw Error('invalid_skin_id');const counts={outsideWindow:0,ineligible:0,anomaly:0,unknown:0,noMatch:0};const results=[];

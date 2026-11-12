@@ -103,6 +103,7 @@ jobs:
           YOLO_AUTOINSTALL: 'false'
           OMP_NUM_THREADS: '2'
       - name: Collect and publish
+        id: collect_accounts
         working-directory: app
         run: node hourly/main.mjs > "$RUNNER_TEMP/private-run.log" 2>&1
         env:
@@ -134,7 +135,8 @@ jobs:
           DISCORD_WEBHOOK_URL_APPLICATION: ${{ secrets.DISCORD_WEBHOOK_URL_APPLICATION }}
           DISCORD_WEBHOOK_URL_501_1000_APPLICATION: ${{ secrets.DISCORD_WEBHOOK_URL_501_1000_APPLICATION }}
           DISCORD_WEBHOOK_URL_1001_3000_APPLICATION: ${{ secrets.DISCORD_WEBHOOK_URL_1001_3000_APPLICATION }}
-      - name: Refresh fixed-week account search index (no AI or message delivery)
+      - name: Refresh rolling-week account search index (no AI or message delivery)
+        if: ${{ always() && !cancelled() && steps.collect_accounts.outcome != 'skipped' }}
         run: node search/publish-index.mjs
         env:
           APPROVED_PACKAGE_SHA: ${{ vars.APPROVED_PACKAGE_SHA }}
