@@ -9,7 +9,7 @@ import {validateControl,controlKey} from './app/monitor-control.mjs';
 import {GetObjectCommand,PutObjectCommand} from '@aws-sdk/client-s3';
 const env=process.env,mode=env.RELEASE_OPERATION;
 const base='b3a1746babe754d7984af5c15748673288bc6491ba15bfa1f5fd68d2a7dda2aa';
-const wanted='52f7f818f715d67b35aa13363edc4dbf4a6a275f59fd4a04b0a6c999b4fb3afd';
+const wanted='6dcb7b3f126a7a917b9438a10b099e76f804928449c9797011037619cbc6cd87';
 const canonical=x=>Array.isArray(x)?x.map(canonical):x&&typeof x==='object'?Object.fromEntries(Object.keys(x).sort().map(k=>[k,canonical(x[k])])):x;
 const hash=x=>createHash('sha256').update(Buffer.isBuffer(x)?x:JSON.stringify(canonical(x))).digest('hex');
 if(mode!=='release'||env.GITHUB_ACTIONS!=='true'||env.GITHUB_REPOSITORY!=='smallight0623-design/market-pilot-hourly-runner'||env.APPROVED_PACKAGE_SHA!==wanted||hash(await fs.readFile('hourly-package.zip'))!==wanted)throw Error('explicit_release_context_required');
