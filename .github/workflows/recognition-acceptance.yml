@@ -10,6 +10,10 @@ on:
         options: [core, application]
         default: core
         required: true
+      offline_benchmark:
+        type: boolean
+        default: false
+        required: false
 permissions:
   contents: read
 jobs:
@@ -115,3 +119,15 @@ jobs:
         run: |
           node --input-type=module -e "import {chromium} from './cloud-trial/node_modules/playwright/index.mjs';const b=await chromium.launch({channel:'chrome',headless:true,timeout:30000});const p=await b.newPage();await p.setContent('<title>browser-ready</title>');if(await p.title()!=='browser-ready')throw Error('browser_smoke');await b.close();console.log('Installed Chrome accepted.');"
 
+
+      - name: Benchmark saved sources with zero external AI and no delivery
+        if: inputs.scope == 'application' && inputs.offline_benchmark
+        working-directory: verify
+        run: |
+          node --input-type=module -e "import('./offline-benchmark/run.mjs').catch(()=>{console.log('offline_benchmark_startup_failed');process.exitCode=1;})"
+        env:
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
+          YOLO_AUTOINSTALL: 'false'
+          OMP_NUM_THREADS: '2'
