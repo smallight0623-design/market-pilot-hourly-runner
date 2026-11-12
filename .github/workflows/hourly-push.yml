@@ -108,6 +108,7 @@ jobs:
         run: node hourly/main.mjs > "$RUNNER_TEMP/private-run.log" 2>&1
         env:
           ADOPTED_RECOGNITION: v1
+          SELECTIVE_LOCAL_ANALYSIS: ${{ vars.SELECTIVE_LOCAL_ANALYSIS }}
           YOLO_AUTOINSTALL: 'false'
           OMP_NUM_THREADS: '2'
           LOCAL_CURRENCY_AUTHORITY: v1
