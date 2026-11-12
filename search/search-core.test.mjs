@@ -6,3 +6,5 @@ test('source, trade type, anomaly and window exclusions',()=>{const rows=[{...ro
 test('skin all versus any, restricted binding excluded',()=>{assert.equal(searchAccounts([row()],{skinIds:['skin-a','skin-b']}).total,0);assert.equal(searchAccounts([row()],{skinIds:['skin-a','skin-b'],skinMode:'any'}).total,1);assert.equal(searchAccounts([{...row(),binding:'id_locked'}],{goodBinding:true}).total,0)});
 
 test('rolling week uses exact query time, includes start and excludes future/end',()=>{const w=rollingWindow(anchor);assert.equal(Date.parse(w.end)-Date.parse(w.start),7*86400000);const input=[{...row('11'),publishedAt:w.start},{...row('12'),publishedAt:new Date(Date.parse(w.start)-1).toISOString()},{...row('13'),publishedAt:w.end}];assert.deepEqual(search(input,{},w).results.map(r=>r.id),['11']);assert.equal(search([{...row(),publishedAt:w.start}],{},rollingWindow(anchor+1)).total,0)});
+
+test('Taiwan midnight query does not round to day boundary',()=>{const w=rollingWindow(Date.parse('2026-11-12T00:05:00+08:00'));assert.equal(w.start,'2026-11-04T16:05:00.000Z');assert.equal(w.end,'2026-11-11T16:05:00.000Z')});
