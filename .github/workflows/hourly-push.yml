@@ -109,6 +109,7 @@ jobs:
         env:
           ADOPTED_RECOGNITION: v1
           SELECTIVE_LOCAL_ANALYSIS: ${{ vars.SELECTIVE_LOCAL_ANALYSIS }}
+          HOURLY_GAP_REPORTS: ${{ vars.HOURLY_GAP_REPORTS }}
           YOLO_AUTOINSTALL: 'false'
           OMP_NUM_THREADS: '2'
           LOCAL_CURRENCY_AUTHORITY: v1
