@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "id": "tracking-reliability-20261113",
+  "formal": {
+    "sha256": "744964eb7e5d2aa91901cfa0e1e70348fbc8d2ec7cfb98c31b7e8d4afd7d1692",
+    "bytes": 75896070,
+    "selectiveLocalAnalysisEnabled": true,
+    "gapReports": "paused-by-owner"
+  },
+  "rollback": {
+    "sha256": "8ed3e5f9270dbf9591ae4758e7ac36ebc7bad86e033db30c9b6e7cc5da4a0213",
+    "scope": "application code only; keep archive pointers/blobs and current business state"
+  },
+  "linuxAcceptanceRun": 43377116501,
+  "releaseRun": 43377864230,
+  "archive": "completed work preserved losslessly in existing private immutable blobs; no private contents in this registry"
+}
