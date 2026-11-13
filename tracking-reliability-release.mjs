@@ -9,8 +9,8 @@ import {validateControl,controlKey} from './app/monitor-control.mjs';
 import {GetObjectCommand,PutObjectCommand} from '@aws-sdk/client-s3';
 const env=process.env,operation=env.RELEASE_OPERATION,mode='release';
 if(!['release','rollback'].includes(operation))throw Error('unsupported_release_operation');
-const base=operation==='rollback'?'66a3f6ee3f9e659af45a39181f832a94931ef17e84e0b5d9d0e12dbc864944fb':'8ed3e5f9270dbf9591ae4758e7ac36ebc7bad86e033db30c9b6e7cc5da4a0213';
-const wanted=operation==='rollback'?'8ed3e5f9270dbf9591ae4758e7ac36ebc7bad86e033db30c9b6e7cc5da4a0213':'66a3f6ee3f9e659af45a39181f832a94931ef17e84e0b5d9d0e12dbc864944fb';
+const base=operation==='rollback'?'744964eb7e5d2aa91901cfa0e1e70348fbc8d2ec7cfb98c31b7e8d4afd7d1692':'8ed3e5f9270dbf9591ae4758e7ac36ebc7bad86e033db30c9b6e7cc5da4a0213';
+const wanted=operation==='rollback'?'8ed3e5f9270dbf9591ae4758e7ac36ebc7bad86e033db30c9b6e7cc5da4a0213':'744964eb7e5d2aa91901cfa0e1e70348fbc8d2ec7cfb98c31b7e8d4afd7d1692';
 const canonical=x=>Array.isArray(x)?x.map(canonical):x&&typeof x==='object'?Object.fromEntries(Object.keys(x).sort().map(k=>[k,canonical(x[k])])):x;
 const hash=x=>createHash('sha256').update(Buffer.isBuffer(x)?x:JSON.stringify(canonical(x))).digest('hex');
 if(mode!=='release'||env.GITHUB_ACTIONS!=='true'||env.GITHUB_REPOSITORY!=='smallight0623-design/market-pilot-hourly-runner'||env.APPROVED_PACKAGE_SHA!==wanted||hash(await fs.readFile('hourly-package.zip'))!==wanted)throw Error('explicit_release_context_required');
@@ -22,6 +22,9 @@ const rawKey=key=>({Bucket:t.config.bucket,Key:t.config.prefix+'/'+key});
 async function raw(key,max=32*1024*1024){const o=await t.client.send(new GetObjectCommand(rawKey(key)));if(o.ContentLength>max)throw Error('read_size');const bytes=Buffer.from(await o.Body.transformToByteArray());if(bytes.length>max)throw Error('read_size');return {bytes,etag:o.ETag};}
 try{
  const store=new ObjectSnapshotStore(t,{compressSnapshots:true}),config={get:(k,m)=>t.getConfig(k,m),putIf:(k,b,c)=>t.putConfig(k,b,c)};
+ const preArchive=await store.read(),preOp=preArchive.data.metadata.hourly;
+ if(preOp.publisherReleaseHash!==base||!preOp.enabled||preOp.lease||Object.values(preOp.outbox??{}).some(o=>['started','unknown'].includes(o.status)))throw Error('archive_release_precondition');
+ await readVersion(config,{expectedReleaseHash:base});
  const archive=operation==='release'?await(await import('./app/hourly/published-archive.mjs')).archivePublishedWork(store):{status:'not_required'};
  const before=await store.read(),op=before.data.metadata.hourly;
  const control=await raw(controlKey,8192),controlValue=validateControl(JSON.parse(control.bytes));
