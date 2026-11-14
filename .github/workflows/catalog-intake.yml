@@ -1,0 +1,81 @@
+name: Explicit data-only catalog intake
+on:
+  workflow_dispatch:
+    inputs:
+      payload_sha:
+        type: string
+        required: true
+permissions:
+  contents: read
+jobs:
+  apply:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    concurrency:
+      group: market-pilot-single-cloud-publisher
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Download approved application
+        run: node bootstrap.mjs
+        env:
+          APPROVED_PACKAGE_SHA: ${{ vars.APPROVED_PACKAGE_SHA }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
+      - name: Download verified private data only
+        run: |
+          node --input-type=module - <<'JS'
+          import {downloadBundle} from './bootstrap.mjs';
+          await downloadBundle({...process.env,APPROVED_PACKAGE_SHA:process.env.CATALOG_PAYLOAD_SHA},{output:'catalog-intake.zip'});
+          console.log('Private catalog data checksum verified.');
+          JS
+        env:
+          CATALOG_PAYLOAD_SHA: ${{ inputs.payload_sha }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
+      - name: Safely extract exact application and bounded data
+        run: |
+          python - <<'PY'
+          import zipfile,pathlib,hashlib,json,re
+          for filename,dest,maximum in [('hourly-package.zip','app',192*1024*1024),('catalog-intake.zip','catalog-intake',48*1024*1024)]:
+              with zipfile.ZipFile(filename) as z:
+                  assert sum(i.file_size for i in z.infolist())<=maximum
+                  assert len(set(z.namelist()))==len(z.namelist())
+                  for i in z.infolist():
+                      p=pathlib.PurePosixPath(i.filename)
+                      assert not p.is_absolute() and '..' not in p.parts and ':' not in i.filename and chr(92) not in i.filename
+                      assert p.name!='.env' and 'node_modules' not in p.parts
+                      assert (i.external_attr>>16)&0o170000!=0o120000
+                      if dest=='catalog-intake':
+                          assert i.filename in ['plan.json','feature-bank.npz','feature-bank.json'] or re.fullmatch(r'references/[a-f0-9]{64}\.png',i.filename)
+                  z.extractall(dest)
+          root=pathlib.Path('app');manifest=json.loads((root/'recognition-release-manifest.json').read_bytes())
+          for name,h in manifest['files'].items():assert hashlib.sha256((root/name).read_bytes()).hexdigest()==h
+          print('Immutable application and data-only intake verified.')
+          PY
+          npm ci --prefix app/cloud-state --ignore-scripts --no-audit --no-fund
+      - name: Apply only explicitly approved additions
+        run: |
+          if ! node catalog-intake.mjs > "$RUNNER_TEMP/catalog-intake.private.log" 2>&1; then
+            node --input-type=module - <<'JS'
+          import fs from 'node:fs/promises';import {createHash} from 'node:crypto';import {S3Client,PutObjectCommand} from '@aws-sdk/client-s3';
+          const bytes=await fs.readFile(process.env.RUNNER_TEMP+'/catalog-intake.private.log'),hash=createHash('sha256').update(bytes).digest('hex');
+          const client=new S3Client({endpoint:process.env.R2_ENDPOINT,region:'auto',forcePathStyle:true,maxAttempts:1,credentials:{accessKeyId:process.env.R2_ACCESS_KEY_ID,secretAccessKey:process.env.R2_SECRET_ACCESS_KEY}});
+          await client.send(new PutObjectCommand({Bucket:'market-pilot-state-trial',Key:'i015-trial/hourly-live-v1/blobs/'+hash+'.blob',Body:bytes,IfNoneMatch:'*'}));client.destroy();console.log(JSON.stringify({event:'catalog_intake_failed_private',diagnosticSha256:hash}));
+          JS
+            exit 1
+          fi
+          node --input-type=module - <<'JS'
+          import fs from 'node:fs/promises';const log=await fs.readFile(process.env.RUNNER_TEMP+'/catalog-intake.private.log','utf8'),line=log.split('\n').find(l=>l.startsWith('{"event":"approved_catalog_intake"'));if(!line)throw Error('intake_receipt_missing');console.log(line);
+          JS
+        env:
+          APPROVED_PACKAGE_SHA: ${{ vars.APPROVED_PACKAGE_SHA }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
