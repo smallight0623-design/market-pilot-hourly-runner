@@ -9,15 +9,15 @@ import {validateControl,controlKey} from './app/monitor-control.mjs';
 import {GetObjectCommand,PutObjectCommand} from '@aws-sdk/client-s3';
 const env=process.env,operation=env.RELEASE_OPERATION,mode='release';
 if(!['release','rollback'].includes(operation))throw Error('unsupported_release_operation');
-const base=operation==='rollback'?'68858dc6fc40d33d26098f3469a405e3ea7f8bb87880b390e2b889d3ca2553d6':'89b1d40d806913de75bc87de31b7964f5a56b9757faf09b4cdc4b9b272591588';
-const wanted=operation==='rollback'?'89b1d40d806913de75bc87de31b7964f5a56b9757faf09b4cdc4b9b272591588':'68858dc6fc40d33d26098f3469a405e3ea7f8bb87880b390e2b889d3ca2553d6';
+const base=operation==='rollback'?'97a909c6e963768bd66bef35e7dd66042dd8e216640ce6e3ee4101295add2c63':'89b1d40d806913de75bc87de31b7964f5a56b9757faf09b4cdc4b9b272591588';
+const wanted=operation==='rollback'?'89b1d40d806913de75bc87de31b7964f5a56b9757faf09b4cdc4b9b272591588':'97a909c6e963768bd66bef35e7dd66042dd8e216640ce6e3ee4101295add2c63';
 const canonical=x=>Array.isArray(x)?x.map(canonical):x&&typeof x==='object'?Object.fromEntries(Object.keys(x).sort().map(k=>[k,canonical(x[k])])):x;
 const hash=x=>createHash('sha256').update(Buffer.isBuffer(x)?x:JSON.stringify(canonical(x))).digest('hex');
 if(mode!=='release'||env.GITHUB_ACTIONS!=='true'||env.GITHUB_REPOSITORY!=='smallight0623-design/market-pilot-hourly-runner'||env.APPROVED_PACKAGE_SHA!==wanted||hash(await fs.readFile('hourly-package.zip'))!==wanted)throw Error('explicit_release_context_required');
 async function github(path){const r=await fetch('https://api.github.com/repos/'+env.GITHUB_REPOSITORY+path,{headers:{Authorization:'Bearer '+env.GITHUB_TOKEN,'User-Agent':'approved-recognition-release'},redirect:'error'});if(!r.ok)throw Error('github_read_'+r.status);return r.json();}
 if((await github('/actions/workflows/hourly-push.yml')).state!=='disabled_manually')throw Error('hourly_workflow_not_paused');
 if((await github('/actions/workflows/hourly-push.yml/runs?per_page=10')).workflow_runs.some(r=>r.status!=='completed'))throw Error('active_hourly_work');
-const t=new R2Transport({endpoint:env.R2_ENDPOINT,bucket:'market-pilot-state-trial',prefix:'i015-trial/hourly-live-v1',accessKeyId:env.R2_ACCESS_KEY_ID,secretAccessKey:env.R2_SECRET_ACCESS_KEY},{maxRequests:130,maxUploadBytes:30*1024*1024});
+const t=new R2Transport({endpoint:env.R2_ENDPOINT,bucket:'market-pilot-state-trial',prefix:'i015-trial/hourly-live-v1',accessKeyId:env.R2_ACCESS_KEY_ID,secretAccessKey:env.R2_SECRET_ACCESS_KEY},{maxRequests:240,maxUploadBytes:100*1024*1024});
 const rawKey=key=>({Bucket:t.config.bucket,Key:t.config.prefix+'/'+key});
 async function raw(key,max=32*1024*1024){const o=await t.client.send(new GetObjectCommand(rawKey(key)));if(o.ContentLength>max)throw Error('read_size');const bytes=Buffer.from(await o.Body.transformToByteArray());if(bytes.length>max)throw Error('read_size');return {bytes,etag:o.ETag};}
 try{
