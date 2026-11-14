@@ -32,7 +32,7 @@ jobs:
       - run: npm ci --ignore-scripts --no-audit --no-fund > "$RUNNER_TEMP/bootstrap-install.log" 2>&1
       - run: node bootstrap.mjs
         env:
-          APPROVED_PACKAGE_SHA: ${{ inputs.operation == 'rollback' && '89b1d40d806913de75bc87de31b7964f5a56b9757faf09b4cdc4b9b272591588' || '97a909c6e963768bd66bef35e7dd66042dd8e216640ce6e3ee4101295add2c63' }}
+          APPROVED_PACKAGE_SHA: ${{ inputs.operation == 'rollback' && '89b1d40d806913de75bc87de31b7964f5a56b9757faf09b4cdc4b9b272591588' || '493e5cbb505b7480ca49a381899ef1585f2e33dc4c8b7dbb835a3ad03a6751a8' }}
           R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
           R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
@@ -63,7 +63,7 @@ jobs:
         env:
           RELEASE_OPERATION: ${{ inputs.operation }}
           APPROVED_NOTE_SHA: ${{ inputs.note_sha }}
-          APPROVED_PACKAGE_SHA: ${{ inputs.operation == 'rollback' && '89b1d40d806913de75bc87de31b7964f5a56b9757faf09b4cdc4b9b272591588' || '97a909c6e963768bd66bef35e7dd66042dd8e216640ce6e3ee4101295add2c63' }}
+          APPROVED_PACKAGE_SHA: ${{ inputs.operation == 'rollback' && '89b1d40d806913de75bc87de31b7964f5a56b9757faf09b4cdc4b9b272591588' || '493e5cbb505b7480ca49a381899ef1585f2e33dc4c8b7dbb835a3ad03a6751a8' }}
           GITHUB_TOKEN: ${{ github.token }}
           R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
           R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
