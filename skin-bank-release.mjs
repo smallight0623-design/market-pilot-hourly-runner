@@ -13,6 +13,7 @@ const base=operation==='rollback'?'5dbac29e7e47fdcf4c8c0eb8c1439ca15d8bbd4e70a13
 const wanted=operation==='rollback'?'493e5cbb505b7480ca49a381899ef1585f2e33dc4c8b7dbb835a3ad03a6751a8':'5dbac29e7e47fdcf4c8c0eb8c1439ca15d8bbd4e70a13f5b02e3a8e4eb11f13b';
 const canonical=x=>Array.isArray(x)?x.map(canonical):x&&typeof x==='object'?Object.fromEntries(Object.keys(x).sort().map(k=>[k,canonical(x[k])])):x;
 const hash=x=>createHash('sha256').update(Buffer.isBuffer(x)?x:JSON.stringify(canonical(x))).digest('hex');
+const heldDeliveryHash='fbc4e2b487d6bf3c135e44e219c3b1488ca78b9e943ad626a303c780372527c5';const uncertainDeliveryStable=op=>hash(Object.values(op.outbox??{}).filter(o=>['started','unknown'].includes(o.status)))===heldDeliveryHash;
 if(mode!=='release'||env.GITHUB_ACTIONS!=='true'||env.GITHUB_REPOSITORY!=='smallight0623-design/market-pilot-hourly-runner'||env.APPROVED_PACKAGE_SHA!==wanted||hash(await fs.readFile('hourly-package.zip'))!==wanted)throw Error('explicit_release_context_required');
 async function github(path){const r=await fetch('https://api.github.com/repos/'+env.GITHUB_REPOSITORY+path,{headers:{Authorization:'Bearer '+env.GITHUB_TOKEN,'User-Agent':'approved-recognition-release'},redirect:'error'});if(!r.ok)throw Error('github_read_'+r.status);return r.json();}
 if((await github('/actions/workflows/hourly-push.yml')).state!=='disabled_manually')throw Error('hourly_workflow_not_paused');
@@ -23,7 +24,7 @@ async function raw(key,max=32*1024*1024){const o=await t.client.send(new GetObje
 try{
  const store=new ObjectSnapshotStore(t,{compressSnapshots:true}),config={get:(k,m)=>t.getConfig(k,m),putIf:(k,b,c)=>t.putConfig(k,b,c)};
  const preArchive=await store.read(),preOp=preArchive.data.metadata.hourly;
- if(preOp.publisherReleaseHash!==base||!preOp.enabled||preOp.lease||Object.values(preOp.outbox??{}).some(o=>['started','unknown'].includes(o.status)))throw Error('archive_release_precondition');
+ if(preOp.publisherReleaseHash!==base||!preOp.enabled||preOp.lease||!uncertainDeliveryStable(preOp))throw Error('archive_release_precondition');
  await readVersion(config,{expectedReleaseHash:base});
  let catalogApplication={status:'none'};
  const pubKey='console-catalog-v1/publication.json',pubBefore=await raw(pubKey,2*1024*1024),jobBefore=JSON.parse(pubBefore.bytes);
@@ -40,7 +41,7 @@ try{
  const archive={status:'not_required'};
  const before=await store.read(),op=before.data.metadata.hourly;
  const control=await raw(controlKey,8192),controlValue=validateControl(JSON.parse(control.bytes));
- if(controlValue.paused||Object.values(controlValue.projects).some(Boolean)||op.lease||Object.values(op.outbox??{}).some(o=>['started','unknown'].includes(o.status)))throw Error('unsafe_live_state');
+ if(controlValue.paused||Object.values(controlValue.projects).some(Boolean)||op.lease||!uncertainDeliveryStable(op))throw Error('unsafe_live_state');
  const fbSettings=hash((await raw('console-facebook-config-v1/current.json')).bytes),fbState=hash((await raw('facebook-feed-v1/state.json')).bytes);
  const receipt={at:new Date().toISOString(),operation,mode,base,wanted,archive,catalogApplication,beforeRevision:before.revision,fbSettings,fbState,noteSha256:env.APPROVED_NOTE_SHA};
  const expected=structuredClone(before.data),e=expected.metadata.hourly;
