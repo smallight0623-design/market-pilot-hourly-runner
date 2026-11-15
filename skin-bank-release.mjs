@@ -9,8 +9,8 @@ import {validateControl,controlKey} from './app/monitor-control.mjs';
 import {GetObjectCommand,PutObjectCommand} from '@aws-sdk/client-s3';
 const env=process.env,operation=env.RELEASE_OPERATION,mode='release';
 if(!['release','rollback'].includes(operation))throw Error('unsupported_release_operation');
-const base=operation==='rollback'?'5dbac29e7e47fdcf4c8c0eb8c1439ca15d8bbd4e70a13f5b02e3a8e4eb11f13b':'493e5cbb505b7480ca49a381899ef1585f2e33dc4c8b7dbb835a3ad03a6751a8';
-const wanted=operation==='rollback'?'493e5cbb505b7480ca49a381899ef1585f2e33dc4c8b7dbb835a3ad03a6751a8':'5dbac29e7e47fdcf4c8c0eb8c1439ca15d8bbd4e70a13f5b02e3a8e4eb11f13b';
+const base=operation==='rollback'?'7359c22e32d6b84f36d16fe77f9ddbfc2a47dae8d90100529b09bc963aec78d6':'5dbac29e7e47fdcf4c8c0eb8c1439ca15d8bbd4e70a13f5b02e3a8e4eb11f13b';
+const wanted=operation==='rollback'?'493e5cbb505b7480ca49a381899ef1585f2e33dc4c8b7dbb835a3ad03a6751a8':'7359c22e32d6b84f36d16fe77f9ddbfc2a47dae8d90100529b09bc963aec78d6';
 const canonical=x=>Array.isArray(x)?x.map(canonical):x&&typeof x==='object'?Object.fromEntries(Object.keys(x).sort().map(k=>[k,canonical(x[k])])):x;
 const hash=x=>createHash('sha256').update(Buffer.isBuffer(x)?x:JSON.stringify(canonical(x))).digest('hex');
 const heldDeliveryHash='fbc4e2b487d6bf3c135e44e219c3b1488ca78b9e943ad626a303c780372527c5';const uncertainDeliveryStable=op=>hash(Object.values(op.outbox??{}).filter(o=>['started','unknown'].includes(o.status)))===heldDeliveryHash;
@@ -45,6 +45,8 @@ try{
  const fbSettings=hash((await raw('console-facebook-config-v1/current.json')).bytes),fbState=hash((await raw('facebook-feed-v1/state.json')).bytes);
  const receipt={at:new Date().toISOString(),operation,mode,base,wanted,archive,catalogApplication,beforeRevision:before.revision,fbSettings,fbState,noteSha256:env.APPROVED_NOTE_SHA};
  const expected=structuredClone(before.data),e=expected.metadata.hourly;
+ if(operation==='release'){for(const key of ['resourceReviews','gapReportReceipt','resourceGapReportReceipt'])delete e[key];}
+
  let version;
  if(mode==='release'){
   if(op.publisherReleaseHash!==base||!op.enabled)throw Error('release_baseline_changed');
