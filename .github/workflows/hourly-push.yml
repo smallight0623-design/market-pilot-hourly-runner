@@ -105,7 +105,11 @@ jobs:
       - name: Collect and publish
         id: collect_accounts
         working-directory: app
-        run: node hourly/main.mjs > "$RUNNER_TEMP/private-run.log" 2>&1
+        run: |
+          result=0
+          node hourly/main.mjs > "$RUNNER_TEMP/private-run.log" 2>&1 || result=$?
+          node ../hourly-diagnostic.mjs
+          exit "$result"
         env:
           ADOPTED_RECOGNITION: v1
           SELECTIVE_LOCAL_ANALYSIS: ${{ vars.SELECTIVE_LOCAL_ANALYSIS }}
