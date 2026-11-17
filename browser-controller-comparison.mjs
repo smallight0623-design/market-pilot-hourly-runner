@@ -4,8 +4,11 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import {setTimeout as delay} from 'node:timers/promises';
+import {createRequire} from 'node:module';
+import {pathToFileURL} from 'node:url';
 import {chromium} from './app/cloud-trial/node_modules/playwright/index.mjs';
-import puppeteer from './comparison-client/node_modules/puppeteer-core/lib/esm/puppeteer/puppeteer-core.js';
+const comparisonRequire=createRequire(new URL('./comparison-client/package.json',import.meta.url));
+const {default:puppeteer}=await import(pathToFileURL(comparisonRequire.resolve('puppeteer-core')).href);
 
 const target=new URL(process.env.TEST_URL);
 if(target.protocol!=='https:'||target.username||target.password)throw Error('https_public_target_required');

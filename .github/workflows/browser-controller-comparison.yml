@@ -41,6 +41,7 @@ jobs:
           npm ci --prefix app/cloud-trial --no-audit --no-fund > "$RUNNER_TEMP/browser-install.log" 2>&1
           mkdir comparison-client
           npm install --prefix comparison-client --ignore-scripts --no-audit --no-fund --save-exact puppeteer-core@25.17.0 > "$RUNNER_TEMP/comparison-client-install.log" 2>&1
+          node --input-type=module -e "import {createRequire} from 'node:module';import{pathToFileURL}from'node:url';const r=createRequire(new URL('./comparison-client/package.json',import.meta.url));const p=await import(pathToFileURL(r.resolve('puppeteer-core')).href);if(typeof p.default.connect!=='function')throw Error('controller_import_failed');console.log('Controller import verified before browser use.');"
       - name: Compare two controllers without business credentials or automatic retries
         run: node browser-controller-comparison.mjs
         env:
