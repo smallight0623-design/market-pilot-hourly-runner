@@ -40,13 +40,14 @@ try{
  const fbKey='facebook-feed-v1/state.json',fbOriginal=protectedObjects.get(fbKey),fbState=JSON.parse(fbOriginal.bytes);
  if(fbState.lease)throw Error('facebook_publisher_busy');
  const facebookRetention=pruneFacebookData(fbState,{apply:true}),fbBytes=Buffer.from(JSON.stringify(fbState));
- if(facebookRetention.eligible){await t.client.send(new PutObjectCommand({...rawKey(fbKey),Body:fbBytes,ContentType:'application/json',IfMatch:fbOriginal.etag}));const checkedFb=await raw(fbKey);if(!checkedFb.bytes.equals(fbBytes))throw Error('facebook_retention_readback');protectedObjects.set(fbKey,checkedFb);}
+ if(facebookRetention.eligible){await t.client.send(new PutObjectCommand({Bucket:t.config.bucket,Key:t.config.prefix+'/'+fbKey,Body:fbBytes,ContentType:'application/json',IfMatch:fbOriginal.etag}));const checkedFb=await raw(fbKey);if(!checkedFb.bytes.equals(fbBytes))throw Error('facebook_retention_readback');protectedObjects.set(fbKey,checkedFb);}
  for(const [key,original]of protectedObjects)if(!(await raw(key)).bytes.equals(original.bytes))throw Error('protected_object_changed');
  console.log(JSON.stringify({event:'active_data_retention_applied',accountRetention,facebookRetention,facebookBytesBefore:fbOriginal.bytes.length,facebookBytesAfter:fbBytes.length,discordDeletes:0,rawBlobDeletes:0}));
  const priorProjection=await t.getProjection('console-projection-v1/body.json',2*1024*1024),aiAvailable=priorProjection&&JSON.parse(priorProjection.bytes).capabilities?.ai===true;
  const projection=await publishProjection({store:rereader,transport:t,env:{...env,RELAYROUTER_API_KEY:aiAvailable?'available':undefined}});
  console.log(JSON.stringify({status:'hybrid_release_verified',beforeRevision:before.revision,afterRevision:after.revision,records:Object.keys(op.records).length,capacity:rereader.capacity,documentHash:checked.version.documentHash,configurationRevision:checked.head.revision,protectedObjectsPreserved:true,uncertainDeliveryHash:uncertainBefore,leaseClearedOnlyAfterOwnerCompleted:!!op.lease,projection,releaseHash:wanted,noteSha:env.APPROVED_NOTE_SHA}));
 }finally{t.close();}
+
 
 
 
