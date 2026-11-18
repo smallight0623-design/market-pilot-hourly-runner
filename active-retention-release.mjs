@@ -17,8 +17,21 @@ try{
  const protectedObjects=new Map();for(const key of protectedKeys)protectedObjects.set(key,await raw(key));
  const pub=JSON.parse(protectedObjects.get(protectedKeys[2]).bytes);if(pub.status==='building'||pub.status==='queued')throw Error('catalog_publication_requires_separate_review');
  const expected=structuredClone(before.data);expected.metadata.hourly.publisherReleaseHash=wanted;expected.metadata.hourly.lease=null;
+ // Recover the one verified adapter omission from its already-saved response.
+ // No source recollection, model call or delivery is performed by release.
+ const recoveredId='2420833545',candidate=expected.metadata.hourly.candidates[recoveredId];
+ if(candidate?.status==='pending'){
+  const req=Object.values(op.scrappeyRequests??{}).find(x=>x.id===recoveredId&&x.status==='received');
+  if(!req?.evidenceHash)throw Error('recovery_evidence_missing');
+  const rawReply=JSON.parse(await store.getBlob(req.evidenceHash));
+  const {decodeResponse}=await import('./app/scrappey/decode.mjs'),{snapshotFromCapture}=await import('./app/cloud-state/observed-input.mjs'),{rowFromSnapshot}=await import('./app/cloud-state/worker.mjs');
+  const capture=await decodeResponse(rawReply.reply.response,{url:candidate.sourceUrl,kind:'detail',observedAt:rawReply.observedAt});capture.publicationEvidence=op.publicationHints[recoveredId];
+  if(capture.status!=='readable')throw Error('recovery_source_not_readable');
+  const snapshot=snapshotFromCapture(capture,capture.images.map(i=>({url:i.url,sha256:null}))),row=rowFromSnapshot(snapshot);
+  candidate.status='ready';candidate.prepared={row,publishedAt:snapshot.publishedAt,capture,previous:null,needsAnalysis:true};candidate.adapterRecovery={at:new Date().toISOString(),evidenceHash:req.evidenceHash};
+ }
  const uncertainBefore=digest(Object.fromEntries(Object.entries(op.outbox).filter(([,o])=>['started','unknown'].includes(o.status))));
- await store.transact(data=>{if(digest(data)!==digest(before.data))throw Error('state_changed');data.metadata.hourly.publisherReleaseHash=wanted;data.metadata.hourly.lease=null;},{expectedRevision:before.revision});
+ await store.transact(data=>{if(digest(data)!==digest(before.data))throw Error('state_changed');data.metadata.hourly=structuredClone(expected.metadata.hourly);},{expectedRevision:before.revision});
  const rereader=new ObjectSnapshotStore(t,{compressSnapshots:true,cacheSnapshots:true}),after=await rereader.read();if(digest(after.data)!==digest(expected))throw Error('migration_readback_failed');
  if(digest(Object.fromEntries(Object.entries(after.data.metadata.hourly.outbox).filter(([,o])=>['started','unknown'].includes(o.status))))!==uncertainBefore)throw Error('uncertain_delivery_changed');
  if(version.version.releaseHash===base)await rebindRelease(config,{expectedOldRelease:base,newRelease:wanted,expectedHeadHash:version.head.hash});
@@ -28,6 +41,7 @@ try{
  const projection=await publishProjection({store:rereader,transport:t,env:{...env,RELAYROUTER_API_KEY:aiAvailable?'available':undefined}});
  console.log(JSON.stringify({status:'hybrid_release_verified',beforeRevision:before.revision,afterRevision:after.revision,records:Object.keys(op.records).length,capacity:rereader.capacity,documentHash:checked.version.documentHash,configurationRevision:checked.head.revision,protectedObjectsPreserved:true,uncertainDeliveryHash:uncertainBefore,leaseClearedOnlyAfterOwnerCompleted:!!op.lease,projection,releaseHash:wanted,noteSha:env.APPROVED_NOTE_SHA}));
 }finally{t.close();}
+
 
 
 
