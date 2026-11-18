@@ -1,7 +1,7 @@
 // Approved hybrid collector release. No source collection, AI calls or message writes.
 import fs from'node:fs/promises';import{createHash}from'node:crypto';
 import{R2Transport}from'./app/cloud-state/r2-transport.mjs';import{ObjectSnapshotStore}from'./app/cloud-state/object-store.mjs';import{digest}from'./app/cloud-state/storage.mjs';import{readVersion,rebindRelease}from'./app/configuration/versions.mjs';import{publishProjection}from'./app/console-projection.mjs';import{GetObjectCommand}from'@aws-sdk/client-s3';
-const env=process.env,base='67d1145a6fe071b08421209070f59c1b5b381996ac47d4340ff05fdb81cf22bd',intermediate='67d1145a6fe071b08421209070f59c1b5b381996ac47d4340ff05fdb81cf22bd',wanted='424e9f0e89feb5efb14bc1b39071cb1b0aa9d20ff18c92ca97dd0a10a75ed44c';
+const env=process.env,base='67d1145a6fe071b08421209070f59c1b5b381996ac47d4340ff05fdb81cf22bd',intermediate='67d1145a6fe071b08421209070f59c1b5b381996ac47d4340ff05fdb81cf22bd',wanted='8bc900479ec6c33706c8e33044e41c82664b8081a57dbea2733557e5f70caa49';
 const sha=b=>createHash('sha256').update(b).digest('hex');
 if(env.GITHUB_ACTIONS!=='true'||env.GITHUB_REPOSITORY!=='smallight0623-design/market-pilot-hourly-runner'||env.APPROVED_PACKAGE_SHA!==wanted||sha(await fs.readFile('hourly-package.zip'))!==wanted||!/^[a-f0-9]{64}$/.test(env.APPROVED_NOTE_SHA??''))throw Error('approved_migration_context_required');
 async function github(path){const r=await fetch('https://api.github.com/repos/'+env.GITHUB_REPOSITORY+path,{headers:{Authorization:'Bearer '+env.GITHUB_TOKEN,'User-Agent':'approved-hybrid-release'},redirect:'error'});if(!r.ok)throw Error('github_'+r.status);return r.json();}
@@ -28,6 +28,7 @@ try{
  const projection=await publishProjection({store:rereader,transport:t,env:{...env,RELAYROUTER_API_KEY:aiAvailable?'available':undefined}});
  console.log(JSON.stringify({status:'hybrid_release_verified',beforeRevision:before.revision,afterRevision:after.revision,records:Object.keys(op.records).length,capacity:rereader.capacity,documentHash:checked.version.documentHash,configurationRevision:checked.head.revision,protectedObjectsPreserved:true,uncertainDeliveryHash:uncertainBefore,leaseClearedOnlyAfterOwnerCompleted:!!op.lease,projection,releaseHash:wanted,noteSha:env.APPROVED_NOTE_SHA}));
 }finally{t.close();}
+
 
 
 
