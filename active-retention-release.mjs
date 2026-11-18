@@ -1,6 +1,6 @@
 // Approved hybrid collector release. No source collection, AI calls or message writes.
 import fs from'node:fs/promises';import{createHash}from'node:crypto';
-import{R2Transport}from'./app/cloud-state/r2-transport.mjs';import{ObjectSnapshotStore}from'./app/cloud-state/object-store.mjs';import{digest}from'./app/cloud-state/storage.mjs';import{readVersion,rebindRelease}from'./app/configuration/versions.mjs';import{publishProjection}from'./app/console-projection.mjs';import{GetObjectCommand}from'@aws-sdk/client-s3';
+import{R2Transport}from'./app/cloud-state/r2-transport.mjs';import{ObjectSnapshotStore}from'./app/cloud-state/object-store.mjs';import{digest}from'./app/cloud-state/storage.mjs';import{readVersion,rebindRelease}from'./app/configuration/versions.mjs';import{publishProjection}from'./app/console-projection.mjs';import{GetObjectCommand,PutObjectCommand}from'@aws-sdk/client-s3';
 const env=process.env,base='98c3b38590c7885fe221e62756bdcf1e4ae38c8f2419c6b7cdbb193c7e6883fa',intermediate='98c3b38590c7885fe221e62756bdcf1e4ae38c8f2419c6b7cdbb193c7e6883fa',wanted='bf627d5723f939606c5973b4dec1dbda72189d74111e494b0661636aa4c44048';
 const sha=b=>createHash('sha256').update(b).digest('hex');
 if(env.GITHUB_ACTIONS!=='true'||env.GITHUB_REPOSITORY!=='smallight0623-design/market-pilot-hourly-runner'||env.APPROVED_PACKAGE_SHA!==wanted||sha(await fs.readFile('hourly-package.zip'))!==wanted||!/^[a-f0-9]{64}$/.test(env.APPROVED_NOTE_SHA??''))throw Error('approved_migration_context_required');
@@ -30,17 +30,24 @@ try{
   const snapshot=snapshotFromCapture(capture,capture.images.map(i=>({url:i.url,sha256:null}))),row=rowFromSnapshot(snapshot);
   candidate.status='ready';candidate.prepared={row,publishedAt:snapshot.publishedAt,capture,previous:null,needsAnalysis:true};candidate.adapterRecovery={at:new Date().toISOString(),evidenceHash:req.evidenceHash};
  }
+ const {pruneAccountData,pruneFacebookData}=await import('./app/data-retention.mjs');const accountRetention=pruneAccountData(expected,{apply:true});
  const uncertainBefore=digest(Object.fromEntries(Object.entries(op.outbox).filter(([,o])=>['started','unknown'].includes(o.status))));
  await store.transact(data=>{if(digest(data)!==digest(before.data))throw Error('state_changed');data.metadata.hourly=structuredClone(expected.metadata.hourly);},{expectedRevision:before.revision});
  const rereader=new ObjectSnapshotStore(t,{compressSnapshots:true,cacheSnapshots:true}),after=await rereader.read();if(digest(after.data)!==digest(expected))throw Error('migration_readback_failed');
  if(digest(Object.fromEntries(Object.entries(after.data.metadata.hourly.outbox).filter(([,o])=>['started','unknown'].includes(o.status))))!==uncertainBefore)throw Error('uncertain_delivery_changed');
  if(version.version.releaseHash===base)await rebindRelease(config,{expectedOldRelease:base,newRelease:wanted,expectedHeadHash:version.head.hash});
  const checked=await readVersion(config,{expectedReleaseHash:wanted});if(checked.version.documentHash!==version.version.documentHash)throw Error('business_documents_changed');
+ const fbKey='facebook-feed-v1/state.json',fbOriginal=protectedObjects.get(fbKey),fbState=JSON.parse(fbOriginal.bytes);
+ if(fbState.lease)throw Error('facebook_publisher_busy');
+ const facebookRetention=pruneFacebookData(fbState,{apply:true}),fbBytes=Buffer.from(JSON.stringify(fbState));
+ if(facebookRetention.eligible){await t.client.send(new PutObjectCommand({...rawKey(fbKey),Body:fbBytes,ContentType:'application/json',IfMatch:fbOriginal.etag}));const checkedFb=await raw(fbKey);if(!checkedFb.bytes.equals(fbBytes))throw Error('facebook_retention_readback');protectedObjects.set(fbKey,checkedFb);}
  for(const [key,original]of protectedObjects)if(!(await raw(key)).bytes.equals(original.bytes))throw Error('protected_object_changed');
+ console.log(JSON.stringify({event:'active_data_retention_applied',accountRetention,facebookRetention,facebookBytesBefore:fbOriginal.bytes.length,facebookBytesAfter:fbBytes.length,discordDeletes:0,rawBlobDeletes:0}));
  const priorProjection=await t.getProjection('console-projection-v1/body.json',2*1024*1024),aiAvailable=priorProjection&&JSON.parse(priorProjection.bytes).capabilities?.ai===true;
  const projection=await publishProjection({store:rereader,transport:t,env:{...env,RELAYROUTER_API_KEY:aiAvailable?'available':undefined}});
  console.log(JSON.stringify({status:'hybrid_release_verified',beforeRevision:before.revision,afterRevision:after.revision,records:Object.keys(op.records).length,capacity:rereader.capacity,documentHash:checked.version.documentHash,configurationRevision:checked.head.revision,protectedObjectsPreserved:true,uncertainDeliveryHash:uncertainBefore,leaseClearedOnlyAfterOwnerCompleted:!!op.lease,projection,releaseHash:wanted,noteSha:env.APPROVED_NOTE_SHA}));
 }finally{t.close();}
+
 
 
 
