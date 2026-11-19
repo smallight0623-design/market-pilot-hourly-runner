@@ -239,3 +239,10 @@ jobs:
           DISCORD_APPLICATION_ID: '1563256161707364382'
 
 
+
+  daily_cp:
+    if: vars.DAILY_CP_ENABLED == 'true' && inputs.execution_mode == 'hourly' && endsWith(inputs.scheduled_for, 'T01:00:00.000Z')
+    uses: ./.github/workflows/daily-cp.yml
+    with:
+      mode: publish
+    secrets: inherit

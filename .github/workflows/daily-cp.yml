@@ -1,7 +1,11 @@
 name: Daily account model CP TOP10
 on:
-  schedule:
-    - cron: '0 1 * * *'
+  workflow_call:
+    inputs:
+      mode:
+        type: string
+        default: publish
+        required: false
   workflow_dispatch:
     inputs:
       mode:
