@@ -1,7 +1,7 @@
 // Approved hybrid collector release. No source collection, AI calls or message writes.
 import fs from'node:fs/promises';import{createHash}from'node:crypto';
 import{R2Transport}from'./app/cloud-state/r2-transport.mjs';import{ObjectSnapshotStore}from'./app/cloud-state/object-store.mjs';import{digest}from'./app/cloud-state/storage.mjs';import{readVersion,rebindRelease}from'./app/configuration/versions.mjs';import{publishProjection}from'./app/console-projection.mjs';import{GetObjectCommand}from'@aws-sdk/client-s3';
-const env=process.env,base='1d2c125babcb585d743193c48e5e3fb8dc30c10d30346ad6b67466ea3d63e61e',intermediate='1d2c125babcb585d743193c48e5e3fb8dc30c10d30346ad6b67466ea3d63e61e',wanted='3c8cbd4b613e9480a71c64020555c2a433d9357977dc62ffea85e210cc35988e';
+const env=process.env,base='1d2c125babcb585d743193c48e5e3fb8dc30c10d30346ad6b67466ea3d63e61e',intermediate='1d2c125babcb585d743193c48e5e3fb8dc30c10d30346ad6b67466ea3d63e61e',wanted='cc5c7db48082fdd9ecb0a63bdad77694f9edd2c28218b2b8ac32df98018f65cd';
 const sha=b=>createHash('sha256').update(b).digest('hex');
 if(env.GITHUB_ACTIONS!=='true'||env.GITHUB_REPOSITORY!=='smallight0623-design/market-pilot-hourly-runner'||env.APPROVED_PACKAGE_SHA!==wanted||sha(await fs.readFile('hourly-package.zip'))!==wanted||!/^[a-f0-9]{64}$/.test(env.APPROVED_NOTE_SHA??''))throw Error('approved_migration_context_required');
 async function github(path){const r=await fetch('https://api.github.com/repos/'+env.GITHUB_REPOSITORY+path,{headers:{Authorization:'Bearer '+env.GITHUB_TOKEN,'User-Agent':'approved-hybrid-release'},redirect:'error'});if(!r.ok)throw Error('github_'+r.status);return r.json();}
