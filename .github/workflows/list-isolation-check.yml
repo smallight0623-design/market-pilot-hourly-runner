@@ -1,0 +1,49 @@
+name: Bounded two list isolation check
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts --no-audit --no-fund > "$RUNNER_TEMP/install.log" 2>&1
+      - run: node bootstrap.mjs
+        env:
+          APPROVED_PACKAGE_SHA: '1bbed540040c6ca96c615f6d6d7189cdfe1305b466fde171233ebe50e5339a16'
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
+      - name: Extract exact diagnostic package and install existing browser client
+        run: |
+          python - <<'PY'
+          import zipfile,pathlib,hashlib,json
+          with zipfile.ZipFile('hourly-package.zip') as z:
+              for name in z.namelist():
+                  p=pathlib.PurePosixPath(name)
+                  assert not p.is_absolute() and '..' not in p.parts and ':' not in name and chr(92) not in name
+              z.extractall('app')
+          root=pathlib.Path('app');manifest=json.loads((root/'recognition-release-manifest.json').read_bytes())
+          for name,sha in manifest['files'].items():assert hashlib.sha256((root/name).read_bytes()).hexdigest()==sha
+          PY
+          npm ci --prefix app/cloud-trial --no-audit --no-fund > "$RUNNER_TEMP/browser-install.log" 2>&1
+      - name: Two lists, at most one transient retry each, no details AI or Discord
+        run: node list-isolation-check.mjs
+      - name: Preserve private capture in existing evidence storage
+        if: always()
+        run: |
+          cat > save-source-check.mjs <<'JS'
+          import fs from'node:fs/promises';import{createHash}from'node:crypto';import{S3Client,PutObjectCommand,GetObjectCommand}from'@aws-sdk/client-s3';
+          const client=new S3Client({endpoint:process.env.R2_ENDPOINT,region:'auto',maxAttempts:1,credentials:{accessKeyId:process.env.R2_ACCESS_KEY_ID,secretAccessKey:process.env.R2_SECRET_ACCESS_KEY}});
+          try{for(const name of ['source-check.private.json','source-check.private.png']){let b;try{b=await fs.readFile(name);}catch{continue;}if(!b.length||b.length>5*1024*1024)throw Error('evidence_size');const hash=createHash('sha256').update(b).digest('hex'),params={Bucket:'market-pilot-state-trial',Key:'i015-trial/hourly-live-v1/blobs/'+hash+'.blob'};await client.send(new PutObjectCommand({...params,Body:b,IfNoneMatch:'*'}));const r=await client.send(new GetObjectCommand(params)),bytes=Buffer.from(await r.Body.transformToByteArray());if(createHash('sha256').update(bytes).digest('hex')!==hash)throw Error('evidence_readback');console.log(JSON.stringify({event:'private_source_evidence',kind:name.endsWith('.json')?'capture':'screenshot',hash}));}}finally{client.destroy();}
+          JS
+          node save-source-check.mjs
+        env:
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
