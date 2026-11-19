@@ -131,6 +131,7 @@ jobs:
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
           RELAYROUTER_API_KEY: ${{ secrets.RELAYROUTER_API_KEY }}
           AI_BASE_URL: https://api.relayrouter.ai/v1
+          AI_MODEL_ROUTING: ${{ vars.AI_MODEL_ROUTING }}
           AI_JSON_MODE: json_object
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           DISCORD_WEBHOOK_URL_501_1000: ${{ secrets.DISCORD_WEBHOOK_URL_501_1000 }}
