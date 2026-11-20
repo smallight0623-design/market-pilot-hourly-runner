@@ -10,7 +10,7 @@ on:
     inputs:
       mode:
         type: choice
-        options: [preview, publish]
+        options: [preview, publish, consolidate]
         default: preview
         required: true
 permissions:
@@ -31,7 +31,7 @@ jobs:
       - run: npm ci --ignore-scripts --no-audit --no-fund > "$RUNNER_TEMP/cp-bootstrap.log" 2>&1
       - run: node bootstrap.mjs
         env:
-          APPROVED_PACKAGE_SHA: d2ce2c918902dbb73d9fd2c3efd6d962ed7d1766a8c8ad0c4f66ebc694c1d4f5
+          APPROVED_PACKAGE_SHA: 5bee4a7d1092536f8c568044548a4e736a8042e4188559e0be5dea71ce902b14
           R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
           R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
@@ -52,13 +52,24 @@ jobs:
           PY
           npm ci --prefix app/cloud-state --ignore-scripts --no-audit --no-fund > "$RUNNER_TEMP/cp-storage.log" 2>&1
       - name: Check ranking and single-delivery protections
-        run: node --test app/daily-cp/daily-cp.test.mjs
+        run: node --test app/daily-cp/*.test.mjs
       - name: Build or publish last 24 hours model CP ranking
         run: node app/daily-cp/main.mjs
         env:
-          DAILY_CP_MODE: ${{ inputs.mode || 'publish' }}
+          DAILY_CP_MODE: ${{ inputs.mode == 'consolidate' && 'publish' || inputs.mode || 'publish' }}
           DAILY_CP_ENABLED: 'true'
           DAILY_CP_CADENCE: hourly
+          DAILY_CP_DISPLAY_MODE: replace
+          DAILY_CP_BOARD_MESSAGE_ID: '1573159817671872523'
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
+          DISCORD_WEBHOOK_URL_DAILY_CP: ${{ secrets.DISCORD_WEBHOOK_URL_DAILY_CP }}
+
+      - name: Consolidate explicitly approved legacy CP boards
+        if: inputs.mode == 'consolidate'
+        run: node cp-cleanup.mjs
+        env:
           R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
           R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
