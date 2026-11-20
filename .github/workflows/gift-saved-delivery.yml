@@ -4,7 +4,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: market-pilot-single-cloud-publisher
+  group: market-pilot-gift-saved-verification
   cancel-in-progress: false
 jobs:
   retire:
