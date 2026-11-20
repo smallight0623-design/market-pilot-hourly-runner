@@ -1,0 +1,35 @@
+name: Verify gift delivery from fresh saved source
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: market-pilot-single-cloud-publisher
+  cancel-in-progress: false
+jobs:
+  retire:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: node bootstrap.mjs
+        env:
+          APPROVED_PACKAGE_SHA: ${{ vars.APPROVED_PACKAGE_SHA }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
+      - run: python -c "import zipfile; zipfile.ZipFile('hourly-package.zip').extractall('app')"
+      - run: npm ci --prefix app/cloud-state --ignore-scripts --no-audit --no-fund
+      - run: node gift-saved-delivery.mjs
+        env:
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
+          DISCORD_ROUTING_KEY: ${{ secrets.DISCORD_ROUTING_KEY }}
