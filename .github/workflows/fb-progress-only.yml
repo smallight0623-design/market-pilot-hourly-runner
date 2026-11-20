@@ -1,0 +1,22 @@
+name: Read FB provider task progress only
+on:
+  workflow_dispatch:
+    inputs:
+      snapshot_id:
+        type: string
+        required: true
+permissions:
+  contents: read
+jobs:
+  read:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node fb-progress-only.mjs
+        env:
+          SNAPSHOT_ID: ${{ inputs.snapshot_id }}
+          BRIGHTDATA_API_KEY: ${{ secrets.BRIGHTDATA_API_KEY }}
