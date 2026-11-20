@@ -31,7 +31,7 @@ jobs:
       - run: npm ci --ignore-scripts --no-audit --no-fund > "$RUNNER_TEMP/cp-bootstrap.log" 2>&1
       - run: node bootstrap.mjs
         env:
-          APPROVED_PACKAGE_SHA: 5bee4a7d1092536f8c568044548a4e736a8042e4188559e0be5dea71ce902b14
+          APPROVED_PACKAGE_SHA: 61aa3a20488ff28e29d2ca50d529691ff6ae874afa56c80835911cd636646a39
           R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
           R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
@@ -60,6 +60,7 @@ jobs:
           DAILY_CP_ENABLED: 'true'
           DAILY_CP_CADENCE: hourly
           DAILY_CP_DISPLAY_MODE: replace
+          DAILY_CP_VIEWER: 'true'
           DAILY_CP_BOARD_MESSAGE_ID: '1573159817671872523'
           R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
           R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
