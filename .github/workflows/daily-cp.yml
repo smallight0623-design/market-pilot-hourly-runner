@@ -31,7 +31,7 @@ jobs:
       - run: npm ci --ignore-scripts --no-audit --no-fund > "$RUNNER_TEMP/cp-bootstrap.log" 2>&1
       - run: node bootstrap.mjs
         env:
-          APPROVED_PACKAGE_SHA: 471821cf7413b558d195c3ae5678c7bb81bbcac7056f19bbb7e66087c972d627
+          APPROVED_PACKAGE_SHA: d2ce2c918902dbb73d9fd2c3efd6d962ed7d1766a8c8ad0c4f66ebc694c1d4f5
           R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
           R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
