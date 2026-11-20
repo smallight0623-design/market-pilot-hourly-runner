@@ -242,7 +242,8 @@ jobs:
 
 
   daily_cp:
-    if: vars.DAILY_CP_ENABLED == 'true' && inputs.execution_mode == 'hourly' && endsWith(inputs.scheduled_for, 'T01:00:00.000Z')
+    needs: hourly
+    if: always() && vars.DAILY_CP_ENABLED == 'true' && inputs.execution_mode == 'hourly'
     uses: ./.github/workflows/daily-cp.yml
     with:
       mode: publish

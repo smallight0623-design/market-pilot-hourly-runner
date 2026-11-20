@@ -1,4 +1,4 @@
-name: Daily account model CP TOP10
+name: Hourly account model CP TOP10
 on:
   workflow_call:
     inputs:
@@ -31,7 +31,7 @@ jobs:
       - run: npm ci --ignore-scripts --no-audit --no-fund > "$RUNNER_TEMP/cp-bootstrap.log" 2>&1
       - run: node bootstrap.mjs
         env:
-          APPROVED_PACKAGE_SHA: 008b277349ddbe32eeddcc38500589bf7862d6194bea21b8d4c1ad5c7ba2c3ba
+          APPROVED_PACKAGE_SHA: 471821cf7413b558d195c3ae5678c7bb81bbcac7056f19bbb7e66087c972d627
           R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
           R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
@@ -58,6 +58,7 @@ jobs:
         env:
           DAILY_CP_MODE: ${{ inputs.mode || 'publish' }}
           DAILY_CP_ENABLED: 'true'
+          DAILY_CP_CADENCE: hourly
           R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
           R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
