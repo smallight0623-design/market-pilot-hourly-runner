@@ -1,7 +1,7 @@
 // Approved hybrid collector release. No source collection, AI calls or message writes.
 import fs from'node:fs/promises';import{createHash}from'node:crypto';
 import{R2Transport}from'./app/cloud-state/r2-transport.mjs';import{ObjectSnapshotStore}from'./app/cloud-state/object-store.mjs';import{digest}from'./app/cloud-state/storage.mjs';import{readVersion,rebindRelease}from'./app/configuration/versions.mjs';import{publishProjection}from'./app/console-projection.mjs';import{GetObjectCommand,PutObjectCommand}from'@aws-sdk/client-s3';
-const env=process.env,old='e17a389b6a694398f71f8e1f210eea25449ae3da2f6bac12ef546550deda2b60',next='d5799215f468f29ae888d80009b86f3aff1a60d24acf3ae9767a7621b4936a01';
+const env=process.env,old='e17a389b6a694398f71f8e1f210eea25449ae3da2f6bac12ef546550deda2b60',next='51fd3c610511403d1bc85c43634f885490bf04917ebe1ee3dfd9e2a0e353bb91';
 if(!['release','rollback'].includes(env.RELEASE_OPERATION))throw Error('operation_required');
 const base=env.RELEASE_OPERATION==='release'?old:next,wanted=env.RELEASE_OPERATION==='release'?next:old;
 const sha=b=>createHash('sha256').update(b).digest('hex');
