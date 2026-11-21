@@ -224,6 +224,7 @@ jobs:
       - name: Check abandoned Facebook lease against the previous workflow run
         run: |
           node --test fb-lease-recovery.test.mjs
+          node fb-storage-install.mjs
           node fb-lease-preflight.mjs
         env:
           GH_TOKEN: ${{ github.token }}
@@ -232,13 +233,14 @@ jobs:
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
       - name: Facebook collection and pending continuation
         working-directory: app
-        run: node facebook/cloud-entry.mjs
+        run: node --input-type=module -e "import {run} from './facebook/checkpoint-entry.mjs'; await run()"
         env:
           ADOPTED_RECOGNITION: v1
           YOLO_AUTOINSTALL: 'false'
           OMP_NUM_THREADS: '2'
           LOCAL_CURRENCY_AUTHORITY: v1
           APPROVED_PACKAGE_SHA: ${{ vars.APPROVED_PACKAGE_SHA }}
+          FB_CHECKPOINT_WRITES: ${{ vars.FB_CHECKPOINT_WRITES }}
           FB_OBSERVATION_TRIAL: ${{ vars.FB_OBSERVATION_TRIAL }}
           EXECUTION_MODE: ${{ inputs.execution_mode }}
           SCHEDULED_FOR: ${{ inputs.scheduled_for }}
