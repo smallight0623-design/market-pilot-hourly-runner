@@ -140,3 +140,11 @@ jobs:
             python -m unittest discover -s recognition/skin-core -p test_long_image.py
             python recognition/long_image_acceptance.py
           fi
+
+      - name: Preserve large-image entry evidence in existing private storage
+        if: inputs.scope == 'application'
+        run: node save-large-report.mjs
+        env:
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
