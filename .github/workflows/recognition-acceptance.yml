@@ -131,3 +131,12 @@ jobs:
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
           YOLO_AUTOINSTALL: 'false'
           OMP_NUM_THREADS: '2'
+
+      - name: Verify long-image deadlines and saved-source recovery
+        if: inputs.scope == 'application'
+        working-directory: verify
+        run: |
+          if [ -f recognition/skin-core/test_long_image.py ]; then
+            python -m unittest discover -s recognition/skin-core -p test_long_image.py
+            python recognition/long_image_acceptance.py
+          fi
