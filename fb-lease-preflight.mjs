@@ -1,6 +1,7 @@
 import {S3Client,GetObjectCommand,PutObjectCommand} from '@aws-sdk/client-s3';
 import {recoverExpiredLease} from './fb-lease-recovery.mjs';
 const env = process.env;
+const inspectOnly = process.argv[2] === '--inspect';
 const sdk = new S3Client({endpoint:env.R2_ENDPOINT,region:'auto',forcePathStyle:true,maxAttempts:1,
   credentials:{accessKeyId:env.R2_ACCESS_KEY_ID,secretAccessKey:env.R2_SECRET_ACCESS_KEY}});
 const object = {Bucket:'market-pilot-state-trial',Key:'i015-trial/hourly-live-v1/facebook-feed-v1/state.json'};
@@ -23,8 +24,9 @@ try {
       save:async value=>{
         const bytes=Buffer.from(JSON.stringify(value));
         if(bytes.length>limit)throw Error('fb_recovery_size_limit');
-        await sdk.send(new PutObjectCommand({...object,Body:bytes,ContentType:'application/json',IfMatch:existing.ETag}));
+        if (!inspectOnly) await sdk.send(new PutObjectCommand({...object,Body:bytes,ContentType:'application/json',IfMatch:existing.ETag}));
       }});
-    console.log(JSON.stringify({status,stateBytes:existing.ContentLength,limitBytes:limit}));
+    console.log(JSON.stringify({status:inspectOnly && status==='released_terminal_run'?'eligible_for_recovery':status,inspectOnly,stateBytes:existing.ContentLength,limitBytes:limit}));
   }
 } finally { sdk.destroy(); }
+
