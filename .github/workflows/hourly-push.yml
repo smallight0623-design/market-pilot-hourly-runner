@@ -151,6 +151,9 @@ jobs:
           R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
   facebook:
+    permissions:
+      contents: read
+      actions: read
     concurrency:
       group: market-pilot-facebook-publisher
       cancel-in-progress: false
@@ -218,6 +221,15 @@ jobs:
         env:
           YOLO_AUTOINSTALL: 'false'
           OMP_NUM_THREADS: '2'
+      - name: Check abandoned Facebook lease against the previous workflow run
+        run: |
+          node --test fb-lease-recovery.test.mjs
+          node fb-lease-preflight.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
       - name: Facebook collection and pending continuation
         working-directory: app
         run: node facebook/cloud-entry.mjs
