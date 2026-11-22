@@ -1,7 +1,7 @@
 // Approved hybrid collector release. No source collection, AI calls or message writes.
 import fs from'node:fs/promises';import{createHash}from'node:crypto';
 import{R2Transport}from'./app/cloud-state/r2-transport.mjs';import{ObjectSnapshotStore}from'./app/cloud-state/object-store.mjs';import{digest}from'./app/cloud-state/storage.mjs';import{readVersion,rebindRelease,validateVersion,publishVersion,hash}from'./app/configuration/versions.mjs';import{publishProjection}from'./app/console-projection.mjs';import{GetObjectCommand,PutObjectCommand}from'@aws-sdk/client-s3';
-const env=process.env,old='b7aba42133a66df8d3267f0abecbc568cd7845bc5a40804b895f6913f2cc84f0',next='0921079aa768f96e08675b9afdf2bc14b53cbb858b7eb77b49130a8a994a1a47';
+const env=process.env,old='b7aba42133a66df8d3267f0abecbc568cd7845bc5a40804b895f6913f2cc84f0',next='0e81ba8ea75b56f9f5975d6c9352ed091e86ac048f5cf5bf479d1b7b2c3ecd4b';
 if(!['release','rollback'].includes(env.RELEASE_OPERATION))throw Error('operation_required');
 const base=env.RELEASE_OPERATION==='release'?old:next,wanted=env.RELEASE_OPERATION==='release'?next:old;
 const sha=b=>createHash('sha256').update(b).digest('hex');
@@ -23,7 +23,7 @@ try{
  if(independentFbRuns.length){const fb=JSON.parse((await raw('facebook-feed-v1/state.json')).bytes);if(fb.lease&&!independentFbRuns.includes(fb.lease.runId))throw Error('unexpected_fb_owner');}
 
 
- const rankBonuses={currentDazzling:700,eitherEternal:4000,historicalPeerless:2000};
+ const rankBonuses={historicalEternal:4000,historicalPeerless:2000};
  const formerBands=[{min:100,maxExclusive:200,amountTwd:500},{min:200,maxExclusive:400,amountTwd:1250},{min:400,maxExclusive:null,amountTwd:2500}];
  const legacy=m=>m.formula==='(core + package) * binding'&&!m.rankBonuses&&hash(m.packageBands)===hash(formerBands);
  const ranked=m=>m.formula==='(core + rank) * binding'&&m.packageBands.length===0&&hash(m.rankBonuses)===hash(rankBonuses);
