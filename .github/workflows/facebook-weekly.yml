@@ -2,6 +2,7 @@ name: Weekly Facebook activity report
 on:
   schedule:
     - cron: '0 1 * * 1'
+    - cron: '20 16 * * *'
   workflow_dispatch:
     inputs:
       mode:
@@ -36,8 +37,8 @@ jobs:
         run: |
           node --input-type=module <<'JS'
           import {downloadBundle} from './bootstrap.mjs';
-          await downloadBundle({...process.env,APPROVED_PACKAGE_SHA:'d78f979b08be87bf294668cfac5fbd831fdcd7d49a71d0ed3e3bebb442763291'},{output:'fb-weekly.mjs'});
-          await downloadBundle({...process.env,APPROVED_PACKAGE_SHA:'4a4fef1d0b329b0eba62b9c5d92cf9140361b12d9205e7e1089059e6b0357e8a'},{output:'fb-weekly-plot.py'});
+          await downloadBundle({...process.env,APPROVED_PACKAGE_SHA:'a72d645b7851f1856a087f06e5ae732e393c89b0919d77c6e8d92bb88c44535d'},{output:'fb-weekly.mjs'});
+          await downloadBundle({...process.env,APPROVED_PACKAGE_SHA:'67fca85907b5fc7ddc5d622d6e042dca41a6a0cdefc91056d7d30999a9356e86'},{output:'fb-weekly-plot.py'});
           JS
           node fb-weekly.mjs prepare
       - name: Render the Taipei publication-hour chart
@@ -45,7 +46,7 @@ jobs:
           python -m pip install matplotlib==3.10.7 > "$RUNNER_TEMP/matplotlib-install.log" 2>&1
           python fb-weekly-plot.py fb-weekly-report.json fb-weekly.png
       - name: Publish the weekly report once
-        if: github.event_name == 'schedule' || inputs.mode == 'publish'
+        if: github.event.schedule == '0 1 * * 1' || inputs.mode == 'publish'
         run: node fb-weekly.mjs send
         env:
           FB_WEEKLY_CHANNEL: '1574303886934540368'
