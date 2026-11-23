@@ -37,8 +37,8 @@ jobs:
         run: |
           node --input-type=module <<'JS'
           import {downloadBundle} from './bootstrap.mjs';
-          await downloadBundle({...process.env,APPROVED_PACKAGE_SHA:'ee9245b5d99d20e88321fe1a888250f1029d24ef814e3f10611e1eeaf0826a5a'},{output:'fb-weekly.mjs'});
-          await downloadBundle({...process.env,APPROVED_PACKAGE_SHA:'67fca85907b5fc7ddc5d622d6e042dca41a6a0cdefc91056d7d30999a9356e86'},{output:'fb-weekly-plot.py'});
+          await downloadBundle({...process.env,APPROVED_PACKAGE_SHA:'fdfb99fb676ab740f7c53c51e018979cda137b386b5ffdf99219c13d4f5d1d3b'},{output:'fb-weekly.mjs'});
+          await downloadBundle({...process.env,APPROVED_PACKAGE_SHA:'ef43bdf4fcf7b2f7259fc42e0a7327f371b8071c12a1ceab9837f5eec8d2e6a0'},{output:'fb-weekly-plot.py'});
           JS
           node fb-weekly.mjs prepare
       - name: Render the Taipei publication-hour chart
