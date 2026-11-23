@@ -7,7 +7,7 @@ on:
     inputs:
       mode:
         type: choice
-        options: [preview, publish]
+        options: [preview, publish, refresh]
         default: preview
         required: true
 permissions:
@@ -37,7 +37,7 @@ jobs:
         run: |
           node --input-type=module <<'JS'
           import {downloadBundle} from './bootstrap.mjs';
-          await downloadBundle({...process.env,APPROVED_PACKAGE_SHA:'a72d645b7851f1856a087f06e5ae732e393c89b0919d77c6e8d92bb88c44535d'},{output:'fb-weekly.mjs'});
+          await downloadBundle({...process.env,APPROVED_PACKAGE_SHA:'2d2a366d96fe485f43364ca904f8cd18ab84264f909b2db088ce2b989ea9414f'},{output:'fb-weekly.mjs'});
           await downloadBundle({...process.env,APPROVED_PACKAGE_SHA:'67fca85907b5fc7ddc5d622d6e042dca41a6a0cdefc91056d7d30999a9356e86'},{output:'fb-weekly-plot.py'});
           JS
           node fb-weekly.mjs prepare
@@ -46,8 +46,8 @@ jobs:
           python -m pip install matplotlib==3.10.7 > "$RUNNER_TEMP/matplotlib-install.log" 2>&1
           python fb-weekly-plot.py fb-weekly-report.json fb-weekly.png
       - name: Publish the weekly report once
-        if: github.event.schedule == '0 1 * * 1' || inputs.mode == 'publish'
-        run: node fb-weekly.mjs send
+        if: github.event.schedule == '0 1 * * 1' || inputs.mode == 'publish' || inputs.mode == 'refresh'
+        run: node fb-weekly.mjs "${{ inputs.mode == 'refresh' && 'refresh' || 'send' }}"
         env:
           FB_WEEKLY_CHANNEL: '1574303886934540368'
           DISCORD_WEBHOOK_URL_FB_WEEKLY: ${{ secrets.DISCORD_WEBHOOK_URL_FB_WEEKLY }}
