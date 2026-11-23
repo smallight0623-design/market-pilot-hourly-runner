@@ -1,8 +1,10 @@
-const source='https://www.facebook.com/photo?fbid=2228186758134890&set=gm.1690237639314591&idorvanity=331505628521139';
-const request={cmd:'request.get',url:source,proxyCountry:'Taiwan',browserActions:[{type:'wait_for_selector',cssSelector:'img[src*="927091456_2228186761468223"]',timeout:15000},{type:'wait',wait:1},{type:'execute_js',code:'(() => [...document.images].filter(i => (i.currentSrc||i.src).includes("927091456_2228186761468223")).map(i => ({url:i.currentSrc||i.src,width:i.naturalWidth,height:i.naturalHeight})))()'}]};
-const r=await fetch('https://publisher.scrappey.com/api/v1?key='+encodeURIComponent(process.env.SCRAPPEY_API_KEY),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(request),redirect:'error',signal:AbortSignal.timeout(180000)});
-if(!r.ok)throw Error('provider_http_'+r.status);
-const body=await r.json(),s=body.solution;
-console.log(JSON.stringify({provider:body.data,error:body.error??null,status:s?.statusCode,path:s?.currentUrl?new URL(s.currentUrl).pathname:null,imageCount:s?.response?.match(/927091456_2228186761468223/g)?.length??0,images:s?.javascriptReturn?.map(x=>Array.isArray(x)?x.map(i=>({width:i.width,height:i.height,ctp:i.url?new URL(i.url).searchParams.get('ctp'):null})):x)}));
-const images=(s?.javascriptReturn??[]).flat().filter(x=>x?.width>590&&x?.height>503);
-if(s?.statusCode!==200||!images.length)throw Error('larger_photo_not_verified');
+// Read-only diagnosis: reuse a paid snapshot and inspect the official catalogue.
+const headers={Authorization:`Bearer ${process.env.BRIGHTDATA_API_KEY}`};
+async function get(path){const r=await fetch('https://api.brightdata.com/datasets/v3/'+path,{headers,signal:AbortSignal.timeout(60000)});if(!r.ok)throw Error('brightdata_http_'+r.status);return r.json();}
+function summary(v){if(typeof v!=='string')return {type:typeof v};try{const u=new URL(v);return {host:u.hostname,path:u.pathname,ctp:u.searchParams.get('ctp'),stp:u.searchParams.get('stp')};}catch{return {type:'text',length:v.length};}}
+const rows=await get('snapshot/sd_mwt7v8771o3tzg9dhi?format=json');
+const row=rows.find(x=>JSON.stringify(x).includes('1690237639314591'));
+if(!row)throw Error('target_not_found');
+console.log('saved_image_fields',JSON.stringify(Object.fromEntries(Object.entries(row).filter(([k])=>/image|photo/.test(k)).map(([k,v])=>[k,Array.isArray(v)?v.map(summary):summary(v)]))));
+console.log('saved_attachments',JSON.stringify(row.attachments?.map(x=>({id:x.id,type:x.type,url:summary(x.url),download:summary(x.downloadable_url)}))));
+for(const domain of ['facebook.com','www.facebook.com']){const catalog=await get('scrapers?domain='+domain);console.log('official_catalog',JSON.stringify(catalog));}
