@@ -1,0 +1,66 @@
+name: 8591 completed account observations
+on:
+  schedule:
+    - cron: '40 15 * * *'
+    - cron: '15 1 * * 1'
+  workflow_dispatch:
+    inputs:
+      mode:
+        type: choice
+        options: [scan-preview, capture, preview, publish, verify-delivery]
+        default: scan-preview
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: market-completed-observations
+  cancel-in-progress: false
+jobs:
+  market:
+    if: github.event_name == 'workflow_dispatch' || vars.MARKET_WEEKLY_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+      R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
+      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
+      DISCORD_WEBHOOK_URL_8591_WEEKLY: ${{ secrets.DISCORD_WEBHOOK_URL_8591_WEEKLY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Load verified private analytics package
+        run: |
+          node --input-type=module <<'JS'
+          import {downloadBundle} from './bootstrap.mjs';
+          await downloadBundle({...process.env,APPROVED_PACKAGE_SHA:'1745e5bb8fc9004cdf685838429f5276463cbd04fe8123f0dbeff8fa27eb8d44'},{output:'market-weekly.mjs'});
+          await downloadBundle({...process.env,APPROVED_PACKAGE_SHA:'41b7d36c3c5645bdcf547ef53904efefd3cd9fd3761fa2c9e05a4f97bb970b01'},{output:'market-plot.py'});
+          JS
+      - name: Read completed public catalogue
+        if: inputs.mode == 'scan-preview' || inputs.mode == 'capture' || github.event.schedule == '40 15 * * *'
+        run: |
+          npm install --no-save --ignore-scripts --no-audit --no-fund playwright@1.64.1
+          node market-weekly.mjs "${{ inputs.mode || 'capture' }}"
+      - name: Prepare previous Taipei week
+        if: inputs.mode == 'preview' || inputs.mode == 'publish' || github.event.schedule == '15 1 * * 1'
+        run: |
+          node market-weekly.mjs prepare
+          python -m pip install matplotlib==3.10.7 > "$RUNNER_TEMP/plot-install.log" 2>&1
+          python - <<'PY'
+          import json,subprocess
+          with open('market-weekly-report.json') as f:
+              report=json.load(f)
+          if report['market']['observationDays']:
+              subprocess.run(['python','market-plot.py','market-weekly-report.json','market-weekly.png','--market','firstSeen'],check=True)
+          PY
+      - name: Publish weekly observation report
+        if: inputs.mode == 'publish' || github.event.schedule == '15 1 * * 1'
+        run: node market-weekly.mjs send
+      - name: Verify destination
+        if: inputs.mode == 'verify-delivery'
+        run: node market-weekly.mjs verify-delivery
