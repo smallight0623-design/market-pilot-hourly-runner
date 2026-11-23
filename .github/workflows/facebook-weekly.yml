@@ -37,7 +37,7 @@ jobs:
         run: |
           node --input-type=module <<'JS'
           import {downloadBundle} from './bootstrap.mjs';
-          await downloadBundle({...process.env,APPROVED_PACKAGE_SHA:'fdfb99fb676ab740f7c53c51e018979cda137b386b5ffdf99219c13d4f5d1d3b'},{output:'fb-weekly.mjs'});
+          await downloadBundle({...process.env,APPROVED_PACKAGE_SHA:'e33a2aa0eff9f6741cf4239c894711d0fd04a7a89220462324d1ca2ef11a39f9'},{output:'fb-weekly.mjs'});
           await downloadBundle({...process.env,APPROVED_PACKAGE_SHA:'ef43bdf4fcf7b2f7259fc42e0a7327f371b8071c12a1ceab9837f5eec8d2e6a0'},{output:'fb-weekly-plot.py'});
           JS
           node fb-weekly.mjs prepare
