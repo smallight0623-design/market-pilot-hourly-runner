@@ -5,13 +5,13 @@ const host=url=>{try{const u=new URL(url);return {path:u.pathname,ctp:u.searchPa
 console.log(JSON.stringify({keys:Object.keys(row),attachments:row.attachments.map(a=>({keys:Object.keys(a),type:a.type,urls:Object.fromEntries(Object.entries(a).filter(([k,v])=>typeof v==='string'&&v.startsWith('https:')).map(([k,v])=>[k,host(v)]))}))}));
 
 const {downloadBundle}=await import('./bootstrap.mjs');
-await downloadBundle({...process.env,APPROVED_PACKAGE_SHA:'485126c36735f5e1e8e8b2d4813daca994c4a836aeebdc4c0e8327d97c8f44df'},{output:'quality-reader.mjs'});
+await downloadBundle({...process.env,APPROVED_PACKAGE_SHA:'42afb5cf091c5199952cbb43eb5b4767aad083aa10c95e53ecc730555b197384'},{output:'quality-reader.mjs'});
 const {createFacebookImageReader}=await import('./quality-reader.mjs');
 const {chromium}=await import('playwright');
 const reader=createFacebookImageReader({browserFactory:()=>chromium.launch({channel:'chrome',headless:true})});
 try {
  const source=row.attachments[0].downloadable_url;
  const result=await reader.resolve({url:row.url},source);
- console.log(JSON.stringify({status:result.status,width:result.width,height:result.height,ctp:new URL(result.url).searchParams.get('ctp')}));
+ console.log(JSON.stringify({status:result.status,stage:result.stage,code:result.code,width:result.width,height:result.height,ctp:new URL(result.url).searchParams.get('ctp')}));
  if(result.status!=='photo_viewer_larger')throw Error('larger_image_not_verified');
 } finally { await reader.close(); }
