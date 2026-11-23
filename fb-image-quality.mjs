@@ -2,7 +2,7 @@
 const headers={Authorization:`Bearer ${process.env.BRIGHTDATA_API_KEY}`,'Content-Type':'application/json'};
 async function request(path,options={}){const r=await fetch('https://api.brightdata.com/datasets/v3/'+path,{...options,headers,signal:AbortSignal.timeout(65000)});if(!r.ok)throw Error('brightdata_http_'+r.status);return r.json();}
 const catalog=await request('scrapers?dataset_id=gd_lyclm1571iy3mv57zw');
-for(const x of catalog)for(const s of x.scrapers??[])console.log('detail_schema',JSON.stringify(s).slice(0,5000));
+for(const x of catalog)for(const [method,s] of Object.entries(x.scrapers??{}))console.log('detail_schema',JSON.stringify({method,s}).slice(0,5000));
 const source='https://www.facebook.com/photo?fbid=2228186758134890&set=gm.1690237639314591&idorvanity=331505628521139';
 let result=await request('scrape?dataset_id=gd_lyclm1571iy3mv57zw&format=json&include_errors=true',{method:'POST',body:JSON.stringify([{url:source}])});
 if(result.snapshot_id){const id=result.snapshot_id;console.log('photo_snapshot',id);for(let n=0;n<8;n++){await new Promise(r=>setTimeout(r,10000));const p=await request('progress/'+id);console.log('photo_progress',p.status);if(p.status==='ready'){result=await request('snapshot/'+id+'?format=json');break;}if(p.status==='failed')throw Error('collection_failed');}}
