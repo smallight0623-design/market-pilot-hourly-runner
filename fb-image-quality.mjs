@@ -1,10 +1,8 @@
-// Read-only diagnosis: reuse a paid snapshot and inspect the official catalogue.
-const headers={Authorization:`Bearer ${process.env.BRIGHTDATA_API_KEY}`};
-async function get(path){const r=await fetch('https://api.brightdata.com/datasets/v3/'+path,{headers,signal:AbortSignal.timeout(60000)});if(!r.ok)throw Error('brightdata_http_'+r.status);return r.json();}
-function summary(v){if(typeof v!=='string')return {type:typeof v};try{const u=new URL(v);return {host:u.hostname,path:u.pathname,ctp:u.searchParams.get('ctp'),stp:u.searchParams.get('stp')};}catch{return {type:'text',length:v.length};}}
-const rows=await get('snapshot/sd_mwt7v8771o3tzg9dhi?format=json');
-const row=rows.find(x=>JSON.stringify(x).includes('1690237639314591'));
-if(!row)throw Error('target_not_found');
-console.log('saved_image_fields',JSON.stringify(Object.fromEntries(Object.entries(row).filter(([k])=>/image|photo/.test(k)).map(([k,v])=>[k,Array.isArray(v)?v.map(summary):summary(v)]))));
-console.log('saved_attachments',JSON.stringify(row.attachments?.map(x=>({id:x.id,type:x.type,url:summary(x.url),download:summary(x.downloadable_url)}))));
-for(const domain of ['facebook.com','www.facebook.com']){const catalog=await get('scrapers?domain='+domain);console.log('official_catalog',JSON.stringify(catalog));}
+// One-record public-post probe; never changes the production feed or sends cards.
+const headers={Authorization:`Bearer ${process.env.BRIGHTDATA_API_KEY}`,'Content-Type':'application/json'};
+async function request(path,options={}){const r=await fetch('https://api.brightdata.com/datasets/v3/'+path,{...options,headers,signal:AbortSignal.timeout(65000)});if(!r.ok)throw Error('brightdata_http_'+r.status);return r.json();}
+let result=await request('scrape?dataset_id=gd_lyclm1571iy3mv57zw&format=json',{method:'POST',body:JSON.stringify([{url:'https://www.facebook.com/groups/331505628521139/posts/1690237639314591/'}])});
+if(result.snapshot_id){const id=result.snapshot_id;console.log('probe_snapshot',id);for(let n=0;n<10;n++){await new Promise(r=>setTimeout(r,10000));const p=await request('progress/'+id);console.log('probe_progress',p.status);if(p.status==='ready'){result=await request('snapshot/'+id+'?format=json');break;}if(p.status==='failed')throw Error('collection_failed');}}
+if(!Array.isArray(result))throw Error('probe_pending');
+function summary(v){try{const u=new URL(v);return {path:u.pathname,ctp:u.searchParams.get('ctp')};}catch{return null;}}
+for(const row of result){console.log('probe_result',JSON.stringify({error:row.error_code??null,fields:Object.keys(row),postImage:summary(row.post_image),attachments:row.attachments?.map(x=>({type:x.type,url:summary(x.url),download:summary(x.downloadable_url)}))}));}
