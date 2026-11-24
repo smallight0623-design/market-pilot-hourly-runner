@@ -33,15 +33,18 @@ if(after.loginRequired||after.path.startsWith('/login')){console.log('photo_brow
 const html=typeof solution.response==='string'?solution.response:'';
 const observedUrls=new Set();
 for(const match of html.matchAll(/"(https?:[^"\r\n]+)"/g)){if(!match[1].includes(target))continue;let value;try{value=JSON.parse('"'+match[1]+'"');}catch{value=match[1].replaceAll('&amp;','&');}try{const u=new URL(value);if(u.protocol==='https:'&&u.hostname.endsWith('.fbcdn.net')&&u.pathname.endsWith('/'+target))observedUrls.add(u.href);}catch{}}
-const candidates=[...(after.images??[]),...[...observedUrls].map(url=>({url}))].filter(i=>{try{const u=new URL(i.url);const ctp=u.searchParams.get('ctp')??'';const bound=ctp.match(/^s(\d+)x(\d+)$/);return u.protocol==='https:'&&u.hostname.endsWith('.fbcdn.net')&&u.pathname.endsWith('/'+target)&&((i.width>590&&i.height>503)||(bound&&Math.max(Number(bound[1]),Number(bound[2]))>590));}catch{return false;}});
+const candidates=[...(after.images??[]),...[...observedUrls].map(url=>({url}))].filter(i=>{try{const u=new URL(i.url);return u.protocol==='https:'&&u.hostname.endsWith('.fbcdn.net')&&u.pathname.endsWith('/'+target);}catch{return false;}});
 console.log('photo_browser_html',JSON.stringify({bytes:Buffer.byteLength(html),targetOccurrences:html.split(target).length-1,observedImageUrls:observedUrls.size,candidates:candidates.map(imageSummary)}));
-const image=candidates.sort((a,b)=>(b.width??0)*(b.height??0)-(a.width??0)*(a.height??0))[0];
-if(!image){console.log('photo_browser_outcome larger_photo_not_found');process.exit(2);}
+const unique=[...new Map(candidates.map(i=>[i.url,i])).values()].slice(0,3);
+let verified=false;
+for(const image of unique){
 const download=await fetch(image.url,{redirect:'error',signal:AbortSignal.timeout(20000)});
-if(!download.ok)throw Error('image_http_'+download.status);
+if(!download.ok){console.log('photo_browser_download',JSON.stringify({http:download.status}));continue;}
 const chunks=[];let length=0;for await(const chunk of download.body){length+=chunk.length;if(length>6*1024*1024)throw Error('image_size_limit');chunks.push(Buffer.from(chunk));}
 const bytes=Buffer.concat(chunks);let dimensions=null;
 if(bytes[0]===255&&bytes[1]===216)for(let i=2;i+9<bytes.length;){if(bytes[i]!==255)break;const marker=bytes[i+1];if(marker===217||marker===218)break;const n=bytes.readUInt16BE(i+2);if([192,193,194,195,197,198,199,201,202,203,205,206,207].includes(marker)){dimensions={width:bytes.readUInt16BE(i+7),height:bytes.readUInt16BE(i+5)};break;}if(n<2)break;i+=n+2;}
 console.log('photo_browser_download',JSON.stringify({bytes:length,dimensions,sha256:createHash('sha256').update(bytes).digest('hex')}));
-if(!dimensions||dimensions.width<=590||dimensions.height<=503)throw Error('downloaded_larger_photo_not_verified');
-console.log('photo_browser_outcome verified_larger_photo');
+if(dimensions&&dimensions.width>590&&dimensions.height>503){verified=true;break;}
+}
+console.log('photo_browser_outcome '+(verified?'verified_larger_photo':'larger_photo_not_found'));
+if(!verified)process.exitCode=2;
