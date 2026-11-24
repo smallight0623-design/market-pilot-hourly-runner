@@ -1,6 +1,17 @@
 import {createHash} from 'node:crypto';
 const digest=b=>createHash('sha256').update(b).digest('hex');
 const mediaUrl=value=>{try{const u=new URL(value);return u.protocol==='https:'&&!u.username&&!u.password&&/(^|\.)(fbcdn\.net|fbsbx\.com)$/.test(u.hostname)?u:null;}catch{return null;}};
+export const photoMonthlyLimit=1000;
+
+export function reservePhotoRequest(state,{runId,photoId,sourceSha256,at=Date.now()}){
+ if(typeof runId!=='string'||!runId||runId.length>120||!/^\d{5,30}$/.test(String(photoId))||!/^[a-f0-9]{64}$/.test(sourceSha256??''))return false;
+ const month=new Date(at+8*3600000).toISOString().slice(0,7),old=state.fbPhotoBudget;
+ if(old&&(old.version!==1||!/^\d{4}-\d{2}$/.test(old.month)||old.month>month||!Number.isSafeInteger(old.used)||old.used<0||typeof old.reservations!=='object'||!old.reservations||Array.isArray(old.reservations)))return false;
+ const budget=old?.month===month?old:{version:1,month,used:0,reservations:{}};
+ const key=digest(Buffer.from(runId+'|'+photoId+'|'+sourceSha256));
+ if(budget.used>=photoMonthlyLimit||budget.reservations[key])return false;
+ budget.used++;budget.reservations[key]=new Date(at).toISOString();state.fbPhotoBudget=budget;return true;
+}
 
 export function facebookPhotoAttachments(row){
  const out=[];
@@ -10,7 +21,7 @@ export function facebookPhotoAttachments(row){
   if(!u||out.some(x=>x.url===u.href))continue;
   const id=String(a.id??'');out.push({url:u.href,photoId:/^\d{5,30}$/.test(id)?id:null,path:u.pathname});
  }
- return out.slice(0,20);
+ return out;
 }
 
 export function observedPhotoUrls(html,path,domImages=[]){
@@ -77,7 +88,7 @@ export async function recoverFacebookPhoto({photoId,postUrl,originalUrl,original
  if(body.data!=='success'||s?.statusCode!==200)return fallback('photo_provider_response_invalid');
  let current;try{current=new URL(s.currentUrl??source.href);}catch{return fallback('photo_provider_response_invalid');}
  if(current.protocol!=='https:'||!['www.facebook.com','facebook.com'].includes(current.hostname)||!/^\/photo(?:\.php)?\/?$/.test(current.pathname))return fallback('photo_page_unavailable');
- const states=(s.javascriptReturn??[]).flat().filter(x=>x&&Array.isArray(x.images));
+ const states=(Array.isArray(s.javascriptReturn)?s.javascriptReturn:[]).flat().filter(x=>x&&Array.isArray(x.images));
  const urls=observedPhotoUrls(s.response??'',path,states.flatMap(x=>x.images));
  // Prefer larger advertised renditions, but always measure downloaded bytes.
  const sizeHint=url=>{const u=new URL(url),m=/^[sp](\d+)x(\d+)$/.exec(u.searchParams.get('ctp')??'');return m?Number(m[1])*Number(m[2]):0;};
@@ -87,20 +98,42 @@ export async function recoverFacebookPhoto({photoId,postUrl,originalUrl,original
   try{const image=await downloadFacebookImage(url,{fetcher,maxBytes});checks.push({width:image.width,height:image.height,bytes:image.bytes.length,sha256:image.sha256});if(image.width*image.height>best.width*best.height&&image.width>=original.width&&image.height>=original.height)best=image;}
   catch(error){checks.push({code:/^photo_image_http_\d{3}$/.test(error.message)?error.message:'photo_image_unavailable'});}
  }
- return {...best,url:best===original?originalUrl:best.url,status:best===original?'no_larger_photo':'photo_viewer_larger',candidateCount:urls.length,checks};
+ return {...best,url:best===original?originalUrl:best.url,status:best!==original?'photo_viewer_larger':checks.some(x=>x.width>0&&x.height>0)?'no_larger_photo':'photo_media_unavailable',candidateCount:urls.length,checks};
 }
 
-export function createCloudPhotoReader({apiKey,fetcher=fetch,maxPhotoReads=8}={}){
+export function createCloudPhotoReader({apiKey,fetcher=fetch,maxPhotoReads=8,clock=Date.now,claim=null}={}){
  if(!Number.isInteger(maxPhotoReads)||maxPhotoReads<0||maxPhotoReads>100)throw Error('photo_budget_invalid');
- const cache=new Map();let reads=0;
+ const cache=new Map();let reads=0,attempts=0;
  return {get reads(){return reads;},async read(post,url,original){
   const reference=post.imageAttachments?.find(x=>x.url===url||x.path===mediaUrl(url)?.pathname);
   if(!apiKey)return {...original,url,status:'photo_provider_disabled'};
   if(!reference?.photoId)return {...original,url,status:'photo_metadata_missing'};
-  const key=reference.photoId+':'+reference.path;
+  const key=reference.photoId+':'+reference.path+':'+original.sha256;
   if(cache.has(key))return cache.get(key);
-  if(reads>=maxPhotoReads)return {...original,url,status:'photo_budget_deferred'};
-  reads++;
-  const promise=recoverFacebookPhoto({photoId:reference.photoId,postUrl:post.url,originalUrl:url,original,apiKey,fetcher});cache.set(key,promise);return promise;
+  const receipt=post.imageQuality?.images?.find(x=>x.image===reference.image&&x.baseline?.sha256===original.sha256);
+  const checkedAt=receipt?.checkedAt??post.imageQuality?.observedAt;
+  const age=clock()-Date.parse(checkedAt??'');
+  if(receipt&&age>=0){
+   if(receipt.selectedUri&&mediaUrl(receipt.selectedUri)?.pathname===mediaUrl(url)?.pathname){
+    try{const image=await downloadFacebookImage(receipt.selectedUri,{fetcher});if(image.width>=original.width&&image.height>=original.height&&image.width*image.height>original.width*original.height)return {...image,status:'photo_cached_larger',checkedAt};}catch{}
+   }
+   if(age<24*3600000&&(receipt.status==='no_larger_photo'||receipt.status==='photo_recently_checked_original_retained'))return {...original,url,status:'photo_recently_checked_original_retained',checkedAt};
+   if(age<15*60000&&/^photo_(?:provider|page|media)/.test(receipt.status))return {...original,url,status:'photo_retry_deferred',checkedAt};
+  }
+  if(attempts>=maxPhotoReads)return {...original,url,status:'photo_budget_deferred'};
+  attempts++;
+  const promise=(async()=>{
+   if(claim){try{const permission=await claim({photoId:reference.photoId,sourceSha256:original.sha256});if(permission!==true)return {...original,url,status:['photo_window_deferred','photo_monitor_paused'].includes(permission)?permission:'photo_month_budget_deferred'};}catch{return {...original,url,status:'photo_budget_unavailable'};}}
+   reads++;
+   return recoverFacebookPhoto({photoId:reference.photoId,postUrl:post.url,originalUrl:url,original,apiKey,fetcher});
+  })().then(result=>({...result,checkedAt:new Date(clock()).toISOString()}));cache.set(key,promise);return promise;
  },async close(){}};
+}
+
+export async function prepareFacebookPhoto(post,url,{reader,enabled=false,fetcher=fetch}={}){
+ const baseline=await downloadFacebookImage(url,{fetcher});
+ const aspect=Math.max(baseline.width,baseline.height)/Math.min(baseline.width,baseline.height);
+ const needsLarger=Math.max(baseline.width,baseline.height)<=1024||(aspect>3&&Math.min(baseline.width,baseline.height)<=1024);
+ const image=enabled&&needsLarger?await reader.read(post,url,baseline):{...baseline,status:'original_retained'};
+ return {image,quality:{status:image.status,checkedAt:image.checkedAt??null,baseline:{width:baseline.width,height:baseline.height,sha256:baseline.sha256},selected:{width:image.width,height:image.height,sha256:image.sha256},candidateCount:image.candidateCount??0,...(image.width*image.height>baseline.width*baseline.height?{selectedUri:image.url}:{})}};
 }
