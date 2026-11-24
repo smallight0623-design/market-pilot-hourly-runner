@@ -1,6 +1,5 @@
-// Read-only audit of already paid source records; no collection requests.
-const r=await fetch('https://api.brightdata.com/datasets/v3/snapshot/sd_mwt7v8771o3tzg9dhi?format=json',{headers:{Authorization:`Bearer ${process.env.BRIGHTDATA_API_KEY}`},signal:AbortSignal.timeout(60000)});
-if(!r.ok)throw Error('source_http_'+r.status);
-const rows=await r.json();
-for(const row of rows){const a=(row.attachments??[]).filter(x=>/photo|image/i.test(x.type??''));if(!a.length)continue;console.log('photo_sample',JSON.stringify({url:row.url,date:row.date_posted,photos:a.length,attachments:a.slice(0,3).map(x=>{let u;try{u=new URL(x.downloadable_url??x.url);}catch{}return {id:x.id,path:u?.pathname,ctp:u?.searchParams.get('ctp')};})}));}
-console.log('photo_sample_total',rows.length);
+// Read-only search for elongated images in existing paid snapshots.
+const ids=['sd_mws34w3215jjhjrp98','sd_mws5bgve1fbf2fh76q','sd_mws7gqz81ggh5xbfa0','sd_mws9l5cz1dpgv0elah','sd_mwsbqgt61294s0ukiv','sd_mwsdvfbs1h9b7t5j2t','sd_mwsg1a0i22c58q7s76','sd_mwsi6t672kot50t4fo','sd_mwskbtv91vh3y0ofek','sd_mwsmfbw8if4ymb2g5','sd_mwsol54b2g34jnfbhe','sd_mwsqr9tt1eo4rb3in0','sd_mwsswe8evb7iyjw8u','sd_mwsv0vhhfk0z48b3h','sd_mwsx6q2s1q3dy6u9jq','sd_mwszafug1lgnyx3b99'];
+let cursor=0,count=0;const found=[];
+async function worker(){while(cursor<ids.length){const id=ids[cursor++];const r=await fetch('https://api.brightdata.com/datasets/v3/snapshot/'+id+'?format=json',{headers:{Authorization:`Bearer ${process.env.BRIGHTDATA_API_KEY}`},signal:AbortSignal.timeout(60000)});if(!r.ok){console.log('snapshot_unavailable',id,r.status);continue;}for(const row of await r.json())for(const a of row.attachments??[]){if(!/photo|image/i.test(a.type??''))continue;count++;let u;try{u=new URL(a.downloadable_url??a.url);}catch{continue;}const m=/^[sp](\d+)x(\d+)$/.exec(u.searchParams.get('ctp')??'');if(m&&Math.max(+m[1],+m[2])/Math.min(+m[1],+m[2])>=3)found.push({snapshot:id,url:row.url,photoId:a.id,path:u.pathname,ctp:u.searchParams.get('ctp')});}}}
+await Promise.all([worker(),worker()]);for(const x of found.slice(0,16))console.log('long_photo_candidate',JSON.stringify(x));console.log('long_photo_summary',JSON.stringify({snapshots:ids.length,attachments:count,longCandidates:found.length}));
