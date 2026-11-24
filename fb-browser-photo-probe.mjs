@@ -30,7 +30,12 @@ console.log('photo_browser_probe',JSON.stringify({http:response.status,providerS
 const after=states.find(s=>s.stage==='after_photo_click');
 if(!response.ok||!after){console.log('photo_browser_outcome provider_response_not_verified');process.exit(2);}
 if(after.loginRequired||after.path.startsWith('/login')){console.log('photo_browser_outcome login_required');process.exit(2);}
-const image=(after.images??[]).filter(i=>{try{const u=new URL(i.url);return u.protocol==='https:'&&u.hostname.endsWith('.fbcdn.net')&&u.pathname.endsWith('/'+target)&&i.width>590&&i.height>503;}catch{return false;}}).sort((a,b)=>b.width*b.height-a.width*a.height)[0];
+const html=typeof solution.response==='string'?solution.response:'';
+const observedUrls=new Set();
+for(const match of html.matchAll(/"(https?:[^"\r\n]+)"/g)){if(!match[1].includes(target))continue;let value;try{value=JSON.parse('"'+match[1]+'"');}catch{value=match[1].replaceAll('&amp;','&');}try{const u=new URL(value);if(u.protocol==='https:'&&u.hostname.endsWith('.fbcdn.net')&&u.pathname.endsWith('/'+target))observedUrls.add(u.href);}catch{}}
+const candidates=[...(after.images??[]),...[...observedUrls].map(url=>({url}))].filter(i=>{try{const u=new URL(i.url);const ctp=u.searchParams.get('ctp')??'';const bound=ctp.match(/^s(\d+)x(\d+)$/);return u.protocol==='https:'&&u.hostname.endsWith('.fbcdn.net')&&u.pathname.endsWith('/'+target)&&((i.width>590&&i.height>503)||(bound&&Math.max(Number(bound[1]),Number(bound[2]))>590));}catch{return false;}});
+console.log('photo_browser_html',JSON.stringify({bytes:Buffer.byteLength(html),targetOccurrences:html.split(target).length-1,observedImageUrls:observedUrls.size,candidates:candidates.map(imageSummary)}));
+const image=candidates.sort((a,b)=>(b.width??0)*(b.height??0)-(a.width??0)*(a.height??0))[0];
 if(!image){console.log('photo_browser_outcome larger_photo_not_found');process.exit(2);}
 const download=await fetch(image.url,{redirect:'error',signal:AbortSignal.timeout(20000)});
 if(!download.ok)throw Error('image_http_'+download.status);
