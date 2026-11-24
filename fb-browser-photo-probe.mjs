@@ -6,8 +6,11 @@ if(!process.env.SCRAPPEY_API_KEY)throw Error('scrappey_key_missing');
 const target='927091456_2228186761468223_8620341231684829677_n.jpg';
 const selector='a[href*="/photo"][href*="2228186758134890"]';
 const visibleLogin=`[...document.querySelectorAll('input[type="password"]')].some(e=>e.getBoundingClientRect().width>0&&e.getBoundingClientRect().height>0)`;
-const inspect=stage=>`(() => ({stage:${JSON.stringify(stage)},path:location.pathname,loginRequired:${visibleLogin},photoAnchors:document.querySelectorAll(${JSON.stringify(selector)}).length,images:[...document.images].filter(i=>(i.currentSrc||i.src).includes(${JSON.stringify(target)})).map(i=>({url:i.currentSrc||i.src,width:i.naturalWidth,height:i.naturalHeight}))}))()`;
+const inspect=stage=>`(() => {const text=document.body?.innerText||'';return {stage:${JSON.stringify(stage)},path:location.pathname,title:document.title,textLength:text.length,imageCount:document.images.length,loginRequired:${visibleLogin},pageSignals:{unavailable:/content isn't available|content is not available|此內容目前無法顯示|內容不存在/i.test(text),loginPrompt:/log in to|log into facebook|登入 Facebook|登录 Facebook|See more on Facebook/i.test(text),cookiePrompt:/allow all cookies|accept all cookies|允許所有 Cookie|允許所有cookie|允許所有 Cookie/i.test(text),verification:/confirm you're human|confirm your identity|驗證你的身分/i.test(text)},photoLinks:[...document.querySelectorAll('a[href*="/photo"]')].slice(0,8).map(a=>({path:new URL(a.href,location.href).pathname,target:a.href.includes('2228186758134890')})),photoAnchors:document.querySelectorAll(${JSON.stringify(selector)}).length,images:[...document.images].filter(i=>(i.currentSrc||i.src).includes(${JSON.stringify(target)})).map(i=>({url:i.currentSrc||i.src,width:i.naturalWidth,height:i.naturalHeight}))}})()`;
 const payload={cmd:'request.get',url:'https://www.facebook.com/groups/331505628521139/posts/1690237639314591/',proxyCountry:'Taiwan',browserActions:[
+ {type:'wait',wait:5},
+ {type:'scroll',repeat:2,delayMs:1000},
+ {type:'wait',wait:5},
  {type:'wait_for_selector',cssSelector:selector,timeout:15000,ignoreErrors:true},
  {type:'execute_js',code:inspect('post_loaded')},
  {type:'if',condition:`Boolean(document.querySelector(${JSON.stringify(selector)}))&&!(${visibleLogin})&&!location.pathname.startsWith('/login')`,then:[
@@ -23,7 +26,7 @@ const solution=body.solution??{};
 const states=(solution.javascriptReturn??[]).flat().filter(x=>x&&typeof x==='object'&&x.stage);
 function imageSummary(i){try{const u=new URL(i.url);return {width:i.width,height:i.height,ctp:u.searchParams.get('ctp'),samePhoto:u.pathname.endsWith('/'+target)};}catch{return {invalidUrl:true};}}
 const safeError=JSON.stringify(body.error??body.errors??'').toLowerCase();
-console.log('photo_browser_probe',JSON.stringify({http:response.status,providerStatus:typeof body.data==='string'?body.data:null,targetStatus:solution.statusCode??null,path:solution.currentUrl?new URL(solution.currentUrl).pathname:null,elapsedSeconds:Math.round((Date.now()-start)/1000),errorKind:/timeout|timed out/.test(safeError)?'timeout':/selector/.test(safeError)?'selector':safeError==='""'?null:'provider_error',responseKeys:Object.keys(body),states:states.map(s=>({stage:s.stage,path:s.path,loginRequired:s.loginRequired,photoAnchors:s.photoAnchors,images:(s.images??[]).map(imageSummary)}))}));
+console.log('photo_browser_probe',JSON.stringify({http:response.status,providerStatus:typeof body.data==='string'?body.data:null,targetStatus:solution.statusCode??null,path:solution.currentUrl?new URL(solution.currentUrl).pathname:null,elapsedSeconds:Math.round((Date.now()-start)/1000),errorKind:/timeout|timed out/.test(safeError)?'timeout':/selector/.test(safeError)?'selector':safeError==='""'?null:'provider_error',responseKeys:Object.keys(body),states:states.map(s=>({stage:s.stage,path:s.path,title:s.title,textLength:s.textLength,imageCount:s.imageCount,pageSignals:s.pageSignals,photoLinks:s.photoLinks,loginRequired:s.loginRequired,photoAnchors:s.photoAnchors,images:(s.images??[]).map(imageSummary)}))}));
 const after=states.find(s=>s.stage==='after_photo_click');
 if(!response.ok||!after){console.log('photo_browser_outcome provider_response_not_verified');process.exit(2);}
 if(after.loginRequired||after.path.startsWith('/login')){console.log('photo_browser_outcome login_required');process.exit(2);}
