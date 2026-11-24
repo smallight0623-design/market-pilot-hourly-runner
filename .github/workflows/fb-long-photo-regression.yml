@@ -1,0 +1,28 @@
+name: Test supplied Facebook vertical long photo
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_bounded_test:
+        description: One Bright Data post and at most two Scrappey photo requests
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  regression:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: node fb-long-photo-regression.mjs
+        env:
+          CONFIRM_FB_LONG_PHOTO: ${{ inputs.confirm_bounded_test }}
+          SCRAPPEY_API_KEY: ${{ secrets.SCRAPPEY_API_KEY }}
+          BRIGHTDATA_API_KEY: ${{ secrets.BRIGHTDATA_API_KEY }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
