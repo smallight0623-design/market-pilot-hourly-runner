@@ -7,7 +7,12 @@ const target='927091456_2228186761468223_8620341231684829677_n.jpg';
 const selector='a[href*="/photo"][href*="2228186758134890"]';
 const visibleLogin=`[...document.querySelectorAll('input[type="password"]')].some(e=>e.getBoundingClientRect().width>0&&e.getBoundingClientRect().height>0)`;
 const inspect=stage=>`(() => {const text=document.body?.innerText||'';return {stage:${JSON.stringify(stage)},path:location.pathname,title:document.title,textLength:text.length,imageCount:document.images.length,loginRequired:${visibleLogin},pageSignals:{unavailable:/content isn't available|content is not available|此內容目前無法顯示|內容不存在/i.test(text),loginPrompt:/log in to|log into facebook|登入 Facebook|登录 Facebook|See more on Facebook/i.test(text),cookiePrompt:/allow all cookies|accept all cookies|允許所有 Cookie|允許所有cookie|允許所有 Cookie/i.test(text),verification:/confirm you're human|confirm your identity|驗證你的身分/i.test(text)},photoLinks:[...document.querySelectorAll('a[href*="/photo"]')].slice(0,8).map(a=>({path:new URL(a.href,location.href).pathname,target:a.href.includes('2228186758134890')})),photoAnchors:document.querySelectorAll(${JSON.stringify(selector)}).length,images:[...document.images].filter(i=>(i.currentSrc||i.src).includes(${JSON.stringify(target)})).map(i=>({url:i.currentSrc||i.src,width:i.naturalWidth,height:i.naturalHeight}))}})()`;
-const payload={cmd:'request.get',url:'https://www.facebook.com/groups/331505628521139/posts/1690237639314591/',proxyCountry:'Taiwan',browserActions:[
+const photoPage=process.env.FB_PHOTO_PROBE_PAGE==='photo';
+const source=photoPage?'https://www.facebook.com/photo?fbid=2228186758134890&set=gm.1690237639314591&idorvanity=331505628521139':'https://www.facebook.com/groups/331505628521139/posts/1690237639314591/';
+const payload={cmd:'request.get',url:source,proxyCountry:'Taiwan',browserActions:photoPage?[
+ {type:'wait',wait:5},
+ {type:'execute_js',code:inspect('after_photo_click')}
+]:[
  {type:'wait',wait:5},
  {type:'scroll',repeat:2,delayMs:1000},
  {type:'wait',wait:5},

@@ -6,6 +6,13 @@ on:
         description: Run one Scrappey request for the fixed public test post
         type: boolean
         default: false
+      page:
+        description: Fixed public post or its observed photo page
+        type: choice
+        options:
+          - post
+          - photo
+        default: post
 permissions:
   contents: read
 jobs:
@@ -20,4 +27,5 @@ jobs:
       - run: node fb-browser-photo-probe.mjs
         env:
           RUN_FB_BROWSER_PHOTO_PROBE: ${{ inputs.confirm_one_request }}
+          FB_PHOTO_PROBE_PAGE: ${{ inputs.page }}
           SCRAPPEY_API_KEY: ${{ secrets.SCRAPPEY_API_KEY }}
