@@ -43,6 +43,7 @@ const candidates=[...(after.images??[]),...[...observedUrls].map(url=>({url}))].
 console.log('photo_browser_html',JSON.stringify({bytes:Buffer.byteLength(html),targetOccurrences:html.split(target).length-1,entityEncodedUrls,observedImageUrls:observedUrls.size,candidates:candidates.map(imageSummary)}));
 const unique=[...new Map(candidates.map(i=>[i.url,i])).values()].slice(0,3);
 let verified=false;
+let bestDimensions=null;
 for(const image of unique){
 const download=await fetch(image.url,{redirect:'error',signal:AbortSignal.timeout(20000)});
 if(!download.ok){console.log('photo_browser_download',JSON.stringify({http:download.status}));continue;}
@@ -50,7 +51,9 @@ const chunks=[];let length=0;for await(const chunk of download.body){length+=chu
 const bytes=Buffer.concat(chunks);let dimensions=null;
 if(bytes[0]===255&&bytes[1]===216)for(let i=2;i+9<bytes.length;){if(bytes[i]!==255)break;const marker=bytes[i+1];if(marker===217||marker===218)break;const n=bytes.readUInt16BE(i+2);if([192,193,194,195,197,198,199,201,202,203,205,206,207].includes(marker)){dimensions={width:bytes.readUInt16BE(i+7),height:bytes.readUInt16BE(i+5)};break;}if(n<2)break;i+=n+2;}
 console.log('photo_browser_download',JSON.stringify({bytes:length,dimensions,sha256:createHash('sha256').update(bytes).digest('hex')}));
-if(dimensions&&dimensions.width>590&&dimensions.height>503){verified=true;break;}
+if(dimensions&&(!bestDimensions||dimensions.width*dimensions.height>bestDimensions.width*bestDimensions.height))bestDimensions=dimensions;
+if(dimensions&&dimensions.width>590&&dimensions.height>503)verified=true;
 }
+console.log('photo_browser_best',JSON.stringify(bestDimensions));
 console.log('photo_browser_outcome '+(verified?'verified_larger_photo':'larger_photo_not_found'));
 if(!verified)process.exitCode=2;
