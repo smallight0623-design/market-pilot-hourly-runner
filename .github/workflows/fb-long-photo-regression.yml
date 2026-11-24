@@ -6,6 +6,10 @@ on:
         description: One Bright Data post and at most two Scrappey photo requests
         type: boolean
         default: false
+      source_snapshot:
+        description: Reuse an existing paid source snapshot instead of collecting again
+        type: string
+        default: ''
 permissions:
   contents: read
 jobs:
@@ -21,6 +25,7 @@ jobs:
       - run: node fb-long-photo-regression.mjs
         env:
           CONFIRM_FB_LONG_PHOTO: ${{ inputs.confirm_bounded_test }}
+          FB_LONG_SOURCE_SNAPSHOT: ${{ inputs.source_snapshot }}
           SCRAPPEY_API_KEY: ${{ secrets.SCRAPPEY_API_KEY }}
           BRIGHTDATA_API_KEY: ${{ secrets.BRIGHTDATA_API_KEY }}
           R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
