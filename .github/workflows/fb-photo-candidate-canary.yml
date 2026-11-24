@@ -1,0 +1,37 @@
+name: Verify private Facebook photo candidate without publishing
+on:
+  workflow_dispatch:
+    inputs:
+      candidate_sha:
+        description: Private candidate bundle digest
+        type: string
+        required: true
+permissions:
+  contents: read
+jobs:
+  canary:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: node bootstrap.mjs
+        env:
+          APPROVED_PACKAGE_SHA: ${{ inputs.candidate_sha }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
+      - run: |
+          unzip -q hourly-package.zip 'facebook/cloud-photo-source.mjs' 'facebook/cloud-runner.mjs' 'facebook/posts.mjs' -d app
+          node --check app/facebook/cloud-runner.mjs
+          node --check app/facebook/posts.mjs
+          node fb-photo-candidate-canary.mjs
+        env:
+          APPROVED_PACKAGE_SHA: ${{ inputs.candidate_sha }}
+          SCRAPPEY_API_KEY: ${{ secrets.SCRAPPEY_API_KEY }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
