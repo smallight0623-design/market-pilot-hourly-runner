@@ -27,7 +27,7 @@ export function facebookPhotoAttachments(row){
 export function observedPhotoUrls(html,path,domImages=[]){
  const urls=new Set();
  const add=value=>{const u=mediaUrl(value);if(u?.pathname===path)urls.add(u.href);};
- for(const i of domImages)add(i.url);
+ for(const i of domImages)if(i&&typeof i.url==='string')add(i.url);
  for(const match of String(html).matchAll(/"(https?:[^"\r\n]+)"/g)){
   let value;try{value=JSON.parse('"'+match[1]+'"');}catch{value=match[1];}
   add(value.replace(/&amp;|&#0*38;|&#x0*26;/gi,'&'));
@@ -84,6 +84,7 @@ export async function recoverFacebookPhoto({photoId,postUrl,originalUrl,original
   if(!response.ok)return fallback('photo_provider_http',{httpStatus:response.status});
   body=JSON.parse(await readBounded(response,8*1024*1024));
  }catch{return fallback('photo_provider_unavailable');}
+ if(!body||typeof body!=='object'||Array.isArray(body))return fallback('photo_provider_response_invalid');
  const s=body.solution;
  if(body.data!=='success'||s?.statusCode!==200)return fallback('photo_provider_response_invalid');
  let current;try{current=new URL(s.currentUrl??source.href);}catch{return fallback('photo_provider_response_invalid');}
@@ -105,12 +106,12 @@ export function createCloudPhotoReader({apiKey,fetcher=fetch,maxPhotoReads=8,clo
  if(!Number.isInteger(maxPhotoReads)||maxPhotoReads<0||maxPhotoReads>100)throw Error('photo_budget_invalid');
  const cache=new Map();let reads=0,attempts=0;
  return {get reads(){return reads;},async read(post,url,original){
-  const reference=post.imageAttachments?.find(x=>x.url===url||x.path===mediaUrl(url)?.pathname);
+  const reference=(Array.isArray(post.imageAttachments)?post.imageAttachments:[]).find(x=>x&&(x.url===url||x.path===mediaUrl(url)?.pathname));
   if(!apiKey)return {...original,url,status:'photo_provider_disabled'};
   if(!reference?.photoId)return {...original,url,status:'photo_metadata_missing'};
   const key=reference.photoId+':'+reference.path+':'+original.sha256;
   if(cache.has(key))return cache.get(key);
-  const receipt=post.imageQuality?.images?.find(x=>x.image===reference.image&&x.baseline?.sha256===original.sha256);
+  const receipt=(Array.isArray(post.imageQuality?.images)?post.imageQuality.images:[]).find(x=>x&&x.image===reference.image&&x.baseline?.sha256===original.sha256);
   const checkedAt=receipt?.checkedAt??post.imageQuality?.observedAt;
   const age=clock()-Date.parse(checkedAt??'');
   if(receipt&&age>=0){
