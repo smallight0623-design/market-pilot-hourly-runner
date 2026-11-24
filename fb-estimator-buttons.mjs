@@ -14,7 +14,7 @@ try{
  const results=[];
  for(const key of keys){const receipt=state.feedReceipts[key],entry=state.fbAnalyses[key].entry,route=routes.find(r=>r.id===registry.active['facebook-feed']&&r.slot==='facebook-feed');if(!route||route.guildId!==receipt.guildId||route.channelId!==receipt.channelId){results.push({key,status:'route_not_confirmed'});continue;}
   const id=receipt.messages?.[0]?.messageId;if(!/^\d{17,20}$/.test(id??''))continue;
-  const url=new URL(route.url+'/messages/'+id);
+  const url=new URL(route.url+'/messages/'+id);url.searchParams.set('with_components','true');
   const request=async(options={})=>{const r=await fetch(url,{...options,redirect:'error',signal:AbortSignal.timeout(15000)});if(r.status===404)return null;if(!r.ok)throw Error('discord_http_'+r.status);return r.json();};
   const before=await request();if(!before){results.push({key,status:'missing'});continue;}
   if(before.id!==id||before.channel_id!==route.channelId||before.webhook_id!==route.webhookId||before.embeds?.[0]?.url!==state.posts[key].url)throw Error('card_identity_changed');
