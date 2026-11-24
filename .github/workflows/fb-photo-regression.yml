@@ -1,0 +1,28 @@
+name: Regress Facebook cloud photo quality on existing records
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_six_requests:
+        description: At most six cloud photo requests; private diagnostic images only
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  regression:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: node fb-photo-regression.mjs
+        env:
+          CONFIRM_FB_PHOTO_REGRESSION: ${{ inputs.confirm_six_requests }}
+          SCRAPPEY_API_KEY: ${{ secrets.SCRAPPEY_API_KEY }}
+          BRIGHTDATA_API_KEY: ${{ secrets.BRIGHTDATA_API_KEY }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
