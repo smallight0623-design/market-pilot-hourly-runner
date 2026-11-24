@@ -1,0 +1,23 @@
+name: Test one public Facebook photo in cloud browser
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_one_request:
+        description: Run one Scrappey request for the fixed public test post
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node fb-browser-photo-probe.mjs
+        env:
+          RUN_FB_BROWSER_PHOTO_PROBE: ${{ inputs.confirm_one_request }}
+          SCRAPPEY_API_KEY: ${{ secrets.SCRAPPEY_API_KEY }}
