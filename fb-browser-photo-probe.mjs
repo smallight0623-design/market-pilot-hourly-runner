@@ -34,7 +34,11 @@ const safeError=JSON.stringify(body.error??body.errors??'').toLowerCase();
 console.log('photo_browser_probe',JSON.stringify({http:response.status,providerStatus:typeof body.data==='string'?body.data:null,targetStatus:solution.statusCode??null,path:solution.currentUrl?new URL(solution.currentUrl).pathname:null,elapsedSeconds:Math.round((Date.now()-start)/1000),errorKind:/timeout|timed out/.test(safeError)?'timeout':/selector/.test(safeError)?'selector':safeError==='""'?null:'provider_error',responseKeys:Object.keys(body),states:states.map(s=>({stage:s.stage,path:s.path,title:s.title,textLength:s.textLength,imageCount:s.imageCount,pageSignals:s.pageSignals,photoLinks:s.photoLinks,loginRequired:s.loginRequired,photoAnchors:s.photoAnchors,images:(s.images??[]).map(imageSummary)}))}));
 const after=states.find(s=>s.stage==='after_photo_click');
 if(!response.ok||!after){console.log('photo_browser_outcome provider_response_not_verified');process.exit(2);}
-if(after.loginRequired||after.path.startsWith('/login')){console.log('photo_browser_outcome login_required');process.exit(2);}
+// A Facebook login form can coexist with an already-delivered public photo.
+// Never interact with authentication; only consume the same photo already loaded.
+const publicPhotoLoaded=(after.images??[]).some(i=>{try{const u=new URL(i.url);return u.protocol==='https:'&&u.hostname.endsWith('.fbcdn.net')&&u.pathname.endsWith('/'+target)&&i.width>0&&i.height>0;}catch{return false;}});
+if(/^\/(?:login|checkpoint)(?:\/|$)/.test(after.path)||(after.loginRequired&&!publicPhotoLoaded)){console.log('photo_browser_outcome login_required');process.exit(2);}
+console.log('photo_browser_access',JSON.stringify({loginFormPresent:after.loginRequired,publicPhotoLoaded}));
 const html=typeof solution.response==='string'?solution.response:'';
 const observedUrls=new Set();
 let entityEncodedUrls=0;
