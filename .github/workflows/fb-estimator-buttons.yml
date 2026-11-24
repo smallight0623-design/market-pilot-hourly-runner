@@ -1,0 +1,44 @@
+name: Add estimator button to recent FB sale cards
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: market-pilot-facebook-publisher
+  cancel-in-progress: false
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: node bootstrap.mjs
+        env:
+          APPROVED_PACKAGE_SHA: ${{ vars.FB_APPROVED_PACKAGE_SHA }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
+      - name: Extract only the verified button dependencies
+        run: |
+          python - <<'PY'
+          import zipfile,pathlib
+          with zipfile.ZipFile('hourly-package.zip') as z:
+              for name in ['facebook/registry.mjs','facebook/favorites.mjs','display-cycle.mjs']:
+                  p=pathlib.Path('app')/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(z.read(name))
+          PY
+      - run: node fb-estimator-buttons.mjs
+        env:
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
+          DISCORD_ROUTING_KEY: ${{ secrets.DISCORD_ROUTING_KEY }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fb-estimator-button-receipt
+          path: fb-estimator-receipt.json
+          if-no-files-found: ignore
