@@ -7,7 +7,7 @@ on:
     inputs:
       mode:
         type: choice
-        options: [scan-preview, capture, preview, preview-publish, publish, verify-delivery]
+        options: [scan-preview, capture, preview, preview-publish, delete-preview, publish, verify-delivery]
         default: scan-preview
         required: true
 permissions:
@@ -38,7 +38,7 @@ jobs:
         run: |
           node --input-type=module <<'JS'
           import {downloadBundle} from './bootstrap.mjs';
-          await downloadBundle({...process.env,APPROVED_PACKAGE_SHA:'7fdf7eee6104593d7de633b1ab93caa7621445d9f1848a17d702d93a39c22704'},{output:'market-weekly.mjs'});
+          await downloadBundle({...process.env,APPROVED_PACKAGE_SHA:'d290571b7a965dc3c3e7a60a800fa43212e911a2987d749a4403e48d66b1637c'},{output:'market-weekly.mjs'});
           await downloadBundle({...process.env,APPROVED_PACKAGE_SHA:'81407331a988a5bb151c03eed21b4df91617087dc8297071fd2432531a994e35'},{output:'market-plot.py'});
           JS
       - name: Load verified resource reference images
@@ -80,3 +80,6 @@ jobs:
       - name: Verify destination
         if: inputs.mode == 'verify-delivery'
         run: node market-weekly.mjs verify-delivery
+      - name: Delete confirmed preview
+        if: inputs.mode == 'delete-preview'
+        run: node market-weekly.mjs delete-preview
