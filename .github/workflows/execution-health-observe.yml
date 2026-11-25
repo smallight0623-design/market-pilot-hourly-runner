@@ -1,5 +1,8 @@
 name: Observe an existing hourly execution
 on:
+  workflow_run:
+    workflows: [Hourly market monitor]
+    types: [completed]
   workflow_dispatch:
     inputs:
       run_id:
@@ -22,7 +25,7 @@ jobs:
       - name: Observe saved execution without starting business work
         run: node execution-health-reporter.mjs
         env:
-          HEALTH_TARGET_RUN_ID: ${{ inputs.run_id }}
+          HEALTH_TARGET_RUN_ID: ${{ github.event.workflow_run.id || inputs.run_id }}
           GITHUB_TOKEN: ${{ github.token }}
           R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
           R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
