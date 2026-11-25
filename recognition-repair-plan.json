@@ -1,0 +1,27 @@
+{
+  "shared": {
+    "before": "0e81ba8ea75b56f9f5975d6c9352ed091e86ac048f5cf5bf479d1b7b2c3ecd4b",
+    "after": "5c16ea8fcdfe32e6d3bafbbf33cb2579cd1ba3dbc78c2e2b8a8bab71a212c7fa",
+    "bytes": 77991220,
+    "changed": [
+      "rank-recognition/recognize.py",
+      "recognition-release-manifest.json",
+      "recognition/skin-core/hybrid.py",
+      "recognition/skin-core/matcher.py",
+      "recognition/skin-core/portrait_regions.py"
+    ]
+  },
+  "facebook": {
+    "before": "8b6245d0ee6e086a788dca8ed33ea072bb72012dfc651e110d707b8d7ed2f1e4",
+    "after": "6e557ceb977f00aaed39fa2f1608ed91cf42ca1224a3ccdeec15002873cf210e",
+    "bytes": 77995889,
+    "changed": [
+      "rank-recognition/recognize.py",
+      "recognition-release-manifest.json",
+      "recognition/skin-core/hybrid.py",
+      "recognition/skin-core/matcher.py",
+      "recognition/skin-core/portrait_regions.py"
+    ]
+  },
+  "evidenceHash": "04672c208dd9d56296308dced062fbd09534ecdb8af181e4d658f31ab7c5f87b"
+}

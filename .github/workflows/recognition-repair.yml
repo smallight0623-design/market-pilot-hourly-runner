@@ -1,0 +1,55 @@
+name: Approved portrait and historical rank repair
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: market-pilot-explicit-release
+  cancel-in-progress: false
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: |
+          SHA=$(node -p "JSON.parse(require('fs').readFileSync('recognition-repair-plan.json')).shared.after")
+          APPROVED_PACKAGE_SHA="$SHA" node bootstrap.mjs
+        env:
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
+      - name: Verify complete immutable application
+        run: |
+          python - <<'PY'
+          import zipfile,pathlib,hashlib,json
+          with zipfile.ZipFile('hourly-package.zip') as z:
+              assert sum(i.file_size for i in z.infolist()) <= 192*1024*1024
+              for i in z.infolist():
+                  p=pathlib.PurePosixPath(i.filename)
+                  assert not p.is_absolute() and '..' not in p.parts and ':' not in i.filename and chr(92) not in i.filename
+                  assert p.name!='.env' and 'node_modules' not in p.parts
+                  assert (i.external_attr >> 16) & 0o170000 != 0o120000
+              z.extractall('app')
+          root=pathlib.Path('app');m=json.loads((root/'recognition-release-manifest.json').read_bytes())
+          for name,sha in m['files'].items():assert hashlib.sha256((root/name).read_bytes()).hexdigest()==sha
+          PY
+      - run: node recognition-repair.mjs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
+          DISCORD_ROUTING_KEY: ${{ secrets.DISCORD_ROUTING_KEY }}
+          DISCORD_APPLICATION_ID: '1563256161707364382'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: recognition-repair-receipt
+          path: recognition-repair-receipt.json
+          if-no-files-found: ignore
