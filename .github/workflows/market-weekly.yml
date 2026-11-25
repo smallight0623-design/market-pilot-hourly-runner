@@ -38,7 +38,7 @@ jobs:
         run: |
           node --input-type=module <<'JS'
           import {downloadBundle} from './bootstrap.mjs';
-          await downloadBundle({...process.env,APPROVED_PACKAGE_SHA:'f8cf0fa843b9ef0900e32687a93eb234b7097990a85cc50f0c1b59f606bfe2db'},{output:'market-weekly.mjs'});
+          await downloadBundle({...process.env,APPROVED_PACKAGE_SHA:'3e8b87b98eb048ae23eaa7db2e8f3cb448b235a945954334af3830b5f8ee2cc9'},{output:'market-weekly.mjs'});
           await downloadBundle({...process.env,APPROVED_PACKAGE_SHA:'41b7d36c3c5645bdcf547ef53904efefd3cd9fd3761fa2c9e05a4f97bb970b01'},{output:'market-plot.py'});
           JS
       - name: Read completed public catalogue
