@@ -38,8 +38,8 @@ jobs:
         run: |
           node --input-type=module <<'JS'
           import {downloadBundle} from './bootstrap.mjs';
-          await downloadBundle({...process.env,APPROVED_PACKAGE_SHA:'6e21a66beb068927f9789a1aba7530cc5c3cf6810a4b2d3bfb6ac40e38ed3c9b'},{output:'market-weekly.mjs'});
-          await downloadBundle({...process.env,APPROVED_PACKAGE_SHA:'453d7d1b527107df3455cee8a67b39047d4fc010ad72b891151d2a7d39a785b6'},{output:'market-plot.py'});
+          await downloadBundle({...process.env,APPROVED_PACKAGE_SHA:'7fdf7eee6104593d7de633b1ab93caa7621445d9f1848a17d702d93a39c22704'},{output:'market-weekly.mjs'});
+          await downloadBundle({...process.env,APPROVED_PACKAGE_SHA:'81407331a988a5bb151c03eed21b4df91617087dc8297071fd2432531a994e35'},{output:'market-plot.py'});
           JS
       - name: Load verified resource reference images
         if: inputs.mode == 'preview' || inputs.mode == 'preview-publish' || inputs.mode == 'publish' || github.event.schedule == '15 1 * * 1'
