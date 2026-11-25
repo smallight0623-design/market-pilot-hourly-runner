@@ -7,7 +7,7 @@ on:
     inputs:
       mode:
         type: choice
-        options: [scan-preview, capture, preview, publish, verify-delivery]
+        options: [scan-preview, capture, preview, preview-publish, publish, verify-delivery]
         default: scan-preview
         required: true
 permissions:
@@ -38,8 +38,8 @@ jobs:
         run: |
           node --input-type=module <<'JS'
           import {downloadBundle} from './bootstrap.mjs';
-          await downloadBundle({...process.env,APPROVED_PACKAGE_SHA:'3e8b87b98eb048ae23eaa7db2e8f3cb448b235a945954334af3830b5f8ee2cc9'},{output:'market-weekly.mjs'});
-          await downloadBundle({...process.env,APPROVED_PACKAGE_SHA:'41b7d36c3c5645bdcf547ef53904efefd3cd9fd3761fa2c9e05a4f97bb970b01'},{output:'market-plot.py'});
+          await downloadBundle({...process.env,APPROVED_PACKAGE_SHA:'9ddac4fcf5c5bb1be5d26c930d10f1b8e9b719d19756d9941d3edc736c20977c'},{output:'market-weekly.mjs'});
+          await downloadBundle({...process.env,APPROVED_PACKAGE_SHA:'453d7d1b527107df3455cee8a67b39047d4fc010ad72b891151d2a7d39a785b6'},{output:'market-plot.py'});
           JS
       - name: Read completed public catalogue
         if: inputs.mode == 'scan-preview' || inputs.mode == 'capture' || github.event.schedule == '40 15 * * *'
@@ -47,9 +47,9 @@ jobs:
           npm install --no-save --ignore-scripts --no-audit --no-fund playwright@1.64.1
           node market-weekly.mjs "${{ inputs.mode || 'capture' }}"
       - name: Prepare previous Taipei week
-        if: inputs.mode == 'preview' || inputs.mode == 'publish' || github.event.schedule == '15 1 * * 1'
+        if: inputs.mode == 'preview' || inputs.mode == 'preview-publish' || inputs.mode == 'publish' || github.event.schedule == '15 1 * * 1'
         run: |
-          node market-weekly.mjs prepare
+          node market-weekly.mjs "${{ inputs.mode == 'preview-publish' && 'prepare-preview' || 'prepare' }}"
           python -m pip install matplotlib==3.10.7 > "$RUNNER_TEMP/plot-install.log" 2>&1
           python - <<'PY'
           import json,subprocess
@@ -59,8 +59,17 @@ jobs:
               subprocess.run(['python','market-plot.py','market-weekly-report.json','market-weekly.png','--market','firstSeen'],check=True)
           PY
       - name: Publish weekly observation report
-        if: inputs.mode == 'publish' || github.event.schedule == '15 1 * * 1'
-        run: node market-weekly.mjs send
+        if: inputs.mode == 'publish' || inputs.mode == 'preview-publish' || github.event.schedule == '15 1 * * 1'
+        run: node market-weekly.mjs "${{ inputs.mode == 'preview-publish' && 'send-preview' || 'send' }}"
+      - name: Save aggregate preview for review
+        if: inputs.mode == 'preview-publish'
+        uses: actions/upload-artifact@v4
+        with:
+          name: completed-market-preview
+          path: |
+            market-weekly-report.json
+            market-weekly.png
+          retention-days: 7
       - name: Verify destination
         if: inputs.mode == 'verify-delivery'
         run: node market-weekly.mjs verify-delivery
