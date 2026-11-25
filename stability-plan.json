@@ -1,7 +1,7 @@
 {
-  "before": "3f30b8283c36ddee73631a73f454892e6ad0c2de939d792868d965d983da285c",
-  "after": "bab78bc0751213356c03ce69d71bd8f153c064922a0585c930340b0d1e1b5040",
-  "bytes": 77994089,
+  "before": "bab78bc0751213356c03ce69d71bd8f153c064922a0585c930340b0d1e1b5040",
+  "after": "b919ab4c6a2b11a2a3b5c18af82a200375fa36bf7e637496e72fb639a4c90cc2",
+  "bytes": 77994119,
   "changed": [
     "console-projection.mjs",
     "console-workbench.mjs",
@@ -13,8 +13,10 @@
     "hourly/work-queue.mjs",
     "scrappey/live-reader.mjs",
     "scrappey/retry-policy.mjs",
-    "scrappey/live-reader.test.mjs"
+    "scrappey/live-reader.test.mjs",
+    "configuration/console-projection.test.mjs"
   ],
+  "mode": "projection-check-fix",
   "recoveries": [
     {
       "id": "2420918039",

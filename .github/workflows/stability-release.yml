@@ -39,7 +39,7 @@ jobs:
           root=pathlib.Path('app');manifest=json.loads((root/'recognition-release-manifest.json').read_bytes())
           for n,h in manifest['files'].items():assert hashlib.sha256((root/n).read_bytes()).hexdigest()==h
           PY
-          node --test app/scrappey/live-reader.test.mjs app/projection-summary-budget.test.mjs
+          node --test app/scrappey/live-reader.test.mjs app/projection-summary-budget.test.mjs app/configuration/console-projection.test.mjs
           node --input-type=module <<'JS'
           import {R2Transport} from './app/cloud-state/r2-transport.mjs';
           const t=new R2Transport({endpoint:'https://'+'a'.repeat(32)+'.r2.cloudflarestorage.com',bucket:'market-pilot-state-trial',prefix:'i015-trial/hourly-live-v1',accessKeyId:'test',secretAccessKey:'test'},{client:{destroy(){}}});
@@ -57,7 +57,13 @@ jobs:
           console.log('Existing 8591 publisher finished.');
           JS
       - name: Apply release, restore saved details and repair existing card
-        run: node stability-release.mjs
+        run: |
+          MODE=$(node -p "JSON.parse(require('fs').readFileSync('stability-plan.json')).mode || ''")
+          if [ "$MODE" = "projection-check-fix" ]; then
+            node stability-check-release.mjs
+          else
+            node stability-release.mjs
+          fi
         env:
           GITHUB_TOKEN: ${{ github.token }}
           R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
