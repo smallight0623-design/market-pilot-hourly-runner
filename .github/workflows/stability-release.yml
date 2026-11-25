@@ -10,7 +10,7 @@ concurrency:
 jobs:
   repair:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -40,6 +40,16 @@ jobs:
           for n,h in manifest['files'].items():assert hashlib.sha256((root/n).read_bytes()).hexdigest()==h
           PY
           node --test app/scrappey/live-reader.test.mjs app/projection-summary-budget.test.mjs
+      - name: Wait for the current 8591 publisher to finish
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          node --input-type=module <<'JS'
+          const get=async(path)=>{const r=await fetch('https://api.github.com/repos/'+process.env.GITHUB_REPOSITORY+path,{headers:{Authorization:'Bearer '+process.env.GITHUB_TOKEN,'User-Agent':'release-wait'},signal:AbortSignal.timeout(15000)});if(!r.ok)throw Error('github_read_'+r.status);return r.json();};
+          const deadline=Date.now()+33*60*1000;
+          for(;;){let active=false;for(const r of (await get('/actions/workflows/hourly-push.yml/runs?per_page=5')).workflow_runs.filter(r=>r.status!=='completed')){const job=(await get('/actions/runs/'+r.id+'/jobs')).jobs.find(j=>j.name==='hourly');if(!job||job.status!=='completed')active=true;}if(!active)break;if(Date.now()>deadline)throw Error('publisher_wait_expired');await new Promise(resolve=>setTimeout(resolve,30000));}
+          console.log('Existing 8591 publisher finished.');
+          JS
       - name: Apply release, restore saved details and repair existing card
         run: node stability-release.mjs
         env:

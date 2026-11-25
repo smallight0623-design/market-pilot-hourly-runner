@@ -1,13 +1,14 @@
 {
   "before": "5c16ea8fcdfe32e6d3bafbbf33cb2579cd1ba3dbc78c2e2b8a8bab71a212c7fa",
-  "after": "79d903cf130fab995196a3cd52652529f3088bf8acbd1fcdb0a8db28a88fbfb6",
-  "bytes": 77993942,
+  "after": "3f30b8283c36ddee73631a73f454892e6ad0c2de939d792868d965d983da285c",
+  "bytes": 77994088,
   "changed": [
     "console-projection.mjs",
     "console-workbench.mjs",
     "projection-summary-budget.mjs",
     "cloud-state/r2-transport.mjs",
     "hourly/live.mjs",
+    "hourly/main.mjs",
     "hourly/runner.mjs",
     "hourly/work-queue.mjs",
     "scrappey/live-reader.mjs",
