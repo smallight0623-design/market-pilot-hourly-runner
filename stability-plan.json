@@ -1,0 +1,29 @@
+{
+  "before": "5c16ea8fcdfe32e6d3bafbbf33cb2579cd1ba3dbc78c2e2b8a8bab71a212c7fa",
+  "after": "79d903cf130fab995196a3cd52652529f3088bf8acbd1fcdb0a8db28a88fbfb6",
+  "bytes": 77993942,
+  "changed": [
+    "console-projection.mjs",
+    "console-workbench.mjs",
+    "projection-summary-budget.mjs",
+    "cloud-state/r2-transport.mjs",
+    "hourly/live.mjs",
+    "hourly/runner.mjs",
+    "hourly/work-queue.mjs",
+    "scrappey/live-reader.mjs",
+    "scrappey/retry-policy.mjs",
+    "scrappey/live-reader.test.mjs"
+  ],
+  "recoveries": [
+    {
+      "id": "2420918039",
+      "evidenceHash": "3d6c5d8bc770ba118096703ef0801c6f14337ad8f810c733547e1d31b91488ea",
+      "observedAt": "2026-11-25T13:04:22.552Z"
+    },
+    {
+      "id": "2420918021",
+      "evidenceHash": "97a616c1189b5f029ec29a4351e43f199d19a915a3bd354106f57b5a03c71416",
+      "observedAt": "2026-11-25T13:04:30.212Z"
+    }
+  ]
+}
