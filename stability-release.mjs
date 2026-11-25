@@ -6,7 +6,9 @@ const env=process.env,plan=JSON.parse(await fs.readFile('stability-plan.json')),
 if(env.GITHUB_ACTIONS!=='true'||env.GITHUB_REPOSITORY!=='smallight0623-design/market-pilot-hourly-runner'||sha(await fs.readFile('hourly-package.zip'))!==plan.after)throw Error('release_context');
 const github=async path=>{const r=await fetch('https://api.github.com/repos/'+env.GITHUB_REPOSITORY+path,{headers:{Authorization:'Bearer '+env.GITHUB_TOKEN,'User-Agent':'stability-release'},redirect:'error'});if(!r.ok)throw Error('github_'+r.status);return r.json();};
 if((await github('/actions/workflows/hourly-push.yml')).state!=='disabled_manually')throw Error('hourly_not_paused');
-if((await github('/actions/workflows/hourly-push.yml/runs?per_page=5')).workflow_runs.some(r=>r.status!=='completed'))throw Error('hourly_active');
+for(const run of (await github('/actions/workflows/hourly-push.yml/runs?per_page=5')).workflow_runs.filter(r=>r.status!=='completed')){
+ const job=(await github('/actions/runs/'+run.id+'/jobs')).jobs.find(j=>j.name==='hourly');if(!job||job.status!=='completed')throw Error('hourly_active');
+}
 const t=new R2Transport({endpoint:env.R2_ENDPOINT,bucket:'market-pilot-state-trial',prefix:'i015-trial/hourly-live-v1',accessKeyId:env.R2_ACCESS_KEY_ID,secretAccessKey:env.R2_SECRET_ACCESS_KEY},{maxRequests:1500,maxUploadBytes:250*1024*1024});
 try{
  const store=new ObjectSnapshotStore(t,{compressSnapshots:true,cacheSnapshots:true,reuseBlobs:true,maxBlobCacheBytes:32*1024*1024}),before=await store.read(),op=before.data.metadata.hourly;
