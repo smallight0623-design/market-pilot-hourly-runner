@@ -38,7 +38,7 @@ jobs:
         run: |
           node --input-type=module <<'JS'
           import {downloadBundle} from './bootstrap.mjs';
-          await downloadBundle({...process.env,APPROVED_PACKAGE_SHA:'d290571b7a965dc3c3e7a60a800fa43212e911a2987d749a4403e48d66b1637c'},{output:'market-weekly.mjs'});
+          await downloadBundle({...process.env,APPROVED_PACKAGE_SHA:'c5cff58c56e3dc5101ea8b38b914e9e9506892c0edf2a44ea66c58339efb7e4d'},{output:'market-weekly.mjs'});
           await downloadBundle({...process.env,APPROVED_PACKAGE_SHA:'81407331a988a5bb151c03eed21b4df91617087dc8297071fd2432531a994e35'},{output:'market-plot.py'});
           JS
       - name: Load verified resource reference images
