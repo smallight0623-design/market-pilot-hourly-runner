@@ -38,8 +38,15 @@ jobs:
         run: |
           node --input-type=module <<'JS'
           import {downloadBundle} from './bootstrap.mjs';
-          await downloadBundle({...process.env,APPROVED_PACKAGE_SHA:'9ddac4fcf5c5bb1be5d26c930d10f1b8e9b719d19756d9941d3edc736c20977c'},{output:'market-weekly.mjs'});
+          await downloadBundle({...process.env,APPROVED_PACKAGE_SHA:'6e21a66beb068927f9789a1aba7530cc5c3cf6810a4b2d3bfb6ac40e38ed3c9b'},{output:'market-weekly.mjs'});
           await downloadBundle({...process.env,APPROVED_PACKAGE_SHA:'453d7d1b527107df3455cee8a67b39047d4fc010ad72b891151d2a7d39a785b6'},{output:'market-plot.py'});
+          JS
+      - name: Load verified resource reference images
+        if: inputs.mode == 'preview' || inputs.mode == 'preview-publish' || inputs.mode == 'publish' || github.event.schedule == '15 1 * * 1'
+        run: |
+          node --input-type=module <<'JS'
+          import {downloadBundle} from './bootstrap.mjs';
+          await downloadBundle({...process.env,APPROVED_PACKAGE_SHA:'07e788f1b6594b18fee0ead23c2532dfe868fbfe150b9267907a4118908f2c02'},{output:'market-reference-images.json.gz'});
           JS
       - name: Read completed public catalogue
         if: inputs.mode == 'scan-preview' || inputs.mode == 'capture' || github.event.schedule == '40 15 * * *'
