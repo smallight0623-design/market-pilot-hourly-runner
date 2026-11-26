@@ -1,11 +1,10 @@
 {
   "mode": "processing-goal-fix",
-  "before": "f5b348c31cf89aaa6fcad0662db6684304bbcc33c2efec66e6ba6018346e0fdb",
-  "after": "53a0068d21d9bc78432db3e34be4efc600739f1e794fe173f66d35b14691a703",
-  "bytes": 77996976,
+  "before": "53a0068d21d9bc78432db3e34be4efc600739f1e794fe173f66d35b14691a703",
+  "after": "4a4c1fbfb3e610ed31c3b4cd3de44f006a4e979b952bfb0b40b842e3923fa93b",
+  "bytes": 77997009,
   "changed": [
-    "gifts/hourly.mjs",
-    "gifts/hourly.test.mjs"
+    "discord-routing/registry.test.mjs"
   ],
   "savedDetailIds": []
 }
