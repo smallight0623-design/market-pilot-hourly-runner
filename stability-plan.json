@@ -1,14 +1,11 @@
 {
   "mode": "processing-goal-fix",
-  "before": "9250400a75e601b68c8141b67956d8a8c6a00109344d8f807aaa3e74ffb1d1a7",
-  "after": "f5b348c31cf89aaa6fcad0662db6684304bbcc33c2efec66e6ba6018346e0fdb",
-  "bytes": 77996475,
+  "before": "f5b348c31cf89aaa6fcad0662db6684304bbcc33c2efec66e6ba6018346e0fdb",
+  "after": "53a0068d21d9bc78432db3e34be4efc600739f1e794fe173f66d35b14691a703",
+  "bytes": 77996976,
   "changed": [
-    "hourly/runner.mjs",
-    "hourly/interleaved.test.mjs",
-    "hourly/work-queue.mjs",
-    "scrappey/live-reader.mjs"
+    "gifts/hourly.mjs",
+    "gifts/hourly.test.mjs"
   ],
-  "savedDetailIds": [],
-  "normalizeReviews": true
+  "savedDetailIds": []
 }
