@@ -1,0 +1,4 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {runtimeFailure} from './runtime-failure.mjs';
+test('abort alone never claims an unverified heap failure',()=>{assert.equal(runtimeFailure('134').runtimeFailure,'process_aborted');assert.equal(runtimeFailure('137').runtimeFailure,'process_killed');});
+test('actual Node heap marker is classified without leaking adjacent private data',()=>{const r=runtimeFailure('134','secret-token-do-not-print\nFATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memory');assert.equal(r.runtimeFailure,'node_heap_exhausted');assert(!JSON.stringify(r).includes('secret-token'));});
+test('untrusted or absent exit status cannot become arbitrary diagnostic text',()=>{assert.equal(runtimeFailure('secret-value').exitCode,null);assert.equal(runtimeFailure(undefined).runtimeFailure,'unknown');});

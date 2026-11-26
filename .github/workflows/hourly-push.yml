@@ -108,7 +108,7 @@ jobs:
         run: |
           result=0
           node hourly/main.mjs > "$RUNNER_TEMP/private-run.log" 2>&1 || result=$?
-          node ../hourly-diagnostic.mjs
+          RUN_EXIT_CODE="$result" PRIVATE_RUN_LOG="$RUNNER_TEMP/private-run.log" node ../hourly-diagnostic.mjs
           exit "$result"
         env:
           DETAIL_PROVIDER: scrappey
