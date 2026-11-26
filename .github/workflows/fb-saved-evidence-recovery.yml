@@ -1,0 +1,64 @@
+name: Recover two saved Facebook catalog replies
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        type: choice
+        options: [preview, apply]
+        required: true
+permissions:
+  contents: read
+jobs:
+  recovery:
+    concurrency:
+      group: market-pilot-facebook-publisher
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: node bootstrap.mjs
+        env:
+          APPROVED_PACKAGE_SHA: ${{ vars.FB_APPROVED_PACKAGE_SHA }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
+      - name: Extract verified application
+        run: |
+          python - <<'PY'
+          import zipfile,pathlib,hashlib,json
+          with zipfile.ZipFile('hourly-package.zip') as z:
+              for i in z.infolist():
+                  p=pathlib.PurePosixPath(i.filename)
+                  assert not p.is_absolute() and '..' not in p.parts and ':' not in i.filename and chr(92) not in i.filename
+                  assert p.name!='.env' and 'node_modules' not in p.parts
+                  assert (i.external_attr >> 16)&0o170000!=0o120000
+              z.extractall('app')
+          root=pathlib.Path('app');manifest=json.loads((root/'recognition-release-manifest.json').read_bytes())
+          for n,h in manifest['files'].items():assert hashlib.sha256((root/n).read_bytes()).hexdigest()==h
+          PY
+          node --test app/facebook/evidence-guard.test.mjs
+      - run: node fb-storage-install.mjs
+        env:
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
+      - name: Validate or deliver saved replies without paid AI
+        run: node fb-saved-evidence-recovery.mjs
+        env:
+          RECOVERY_MODE: ${{ inputs.mode }}
+          MAIN_PACKAGE_SHA: ${{ vars.APPROVED_PACKAGE_SHA }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
+          DISCORD_ROUTING_KEY: ${{ secrets.DISCORD_ROUTING_KEY }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fb-saved-recovery-receipt
+          path: fb-saved-recovery-receipt.json
+          if-no-files-found: ignore
