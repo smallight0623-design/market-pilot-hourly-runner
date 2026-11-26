@@ -1,32 +1,37 @@
 {
-  "before": "bab78bc0751213356c03ce69d71bd8f153c064922a0585c930340b0d1e1b5040",
-  "after": "b919ab4c6a2b11a2a3b5c18af82a200375fa36bf7e637496e72fb639a4c90cc2",
-  "bytes": 77994119,
+  "mode": "processing-goal-fix",
+  "before": "b919ab4c6a2b11a2a3b5c18af82a200375fa36bf7e637496e72fb639a4c90cc2",
+  "after": "9250400a75e601b68c8141b67956d8a8c6a00109344d8f807aaa3e74ffb1d1a7",
+  "bytes": 77995940,
   "changed": [
-    "console-projection.mjs",
-    "console-workbench.mjs",
-    "projection-summary-budget.mjs",
-    "cloud-state/r2-transport.mjs",
+    "facebook/evidence-guard.mjs",
+    "facebook/evidence-guard.test.mjs",
+    "gifts/cloud.mjs",
+    "gifts/hourly.mjs",
+    "hourly/interleaved.test.mjs",
     "hourly/live.mjs",
-    "hourly/main.mjs",
     "hourly/runner.mjs",
-    "hourly/work-queue.mjs",
+    "recognition-release-manifest.json",
+    "scrappey/bridge.test.mjs",
+    "scrappey/decode.mjs",
     "scrappey/live-reader.mjs",
-    "scrappey/retry-policy.mjs",
     "scrappey/live-reader.test.mjs",
-    "configuration/console-projection.test.mjs"
+    "scrappey/provider.mjs",
+    "scrappey/provider.test.mjs",
+    "scrappey/retry-policy.mjs"
   ],
-  "mode": "projection-check-fix",
-  "recoveries": [
-    {
-      "id": "2420918039",
-      "evidenceHash": "3d6c5d8bc770ba118096703ef0801c6f14337ad8f810c733547e1d31b91488ea",
-      "observedAt": "2026-11-25T13:04:22.552Z"
-    },
-    {
-      "id": "2420918021",
-      "evidenceHash": "97a616c1189b5f029ec29a4351e43f199d19a915a3bd354106f57b5a03c71416",
-      "observedAt": "2026-11-25T13:04:30.212Z"
-    }
+  "facebook": {
+    "before": "6e557ceb977f00aaed39fa2f1608ed91cf42ca1224a3ccdeec15002873cf210e",
+    "after": "b14a0fe1e1259b1a697d21207632e1b4826c326a2d8da8df95c32055cedde543",
+    "bytes": 77995959,
+    "changed": [
+      "facebook/evidence-guard.mjs",
+      "facebook/evidence-guard.test.mjs",
+      "recognition-release-manifest.json"
+    ]
+  },
+  "savedDetailIds": [
+    "2420926465",
+    "2420926682"
   ]
 }

@@ -59,7 +59,7 @@ jobs:
       - name: Apply release, restore saved details and repair existing card
         run: |
           MODE=$(node -p "JSON.parse(require('fs').readFileSync('stability-plan.json')).mode || ''")
-          if [ "$MODE" = "projection-check-fix" ]; then
+          if [ "$MODE" = "projection-check-fix" ] || [ "$MODE" = "processing-goal-fix" ]; then
             node stability-check-release.mjs
           else
             node stability-release.mjs
