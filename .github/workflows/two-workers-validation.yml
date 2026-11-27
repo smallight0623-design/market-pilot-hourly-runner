@@ -48,7 +48,15 @@ jobs:
           JS
       - name: Full accepted pipeline regression including concurrency protections
         run: node two-workers-check.mjs
+      - name: Verify inventory read amplification using synthetic data only
+        run: |
+          node --expose-gc memory-view-benchmark.mjs full > memory-view-before.json
+          node --expose-gc memory-view-benchmark.mjs selected > memory-view-after.json
+          node --input-type=module -e "import fs from 'node:fs';import assert from 'node:assert/strict';const a=JSON.parse(fs.readFileSync('memory-view-before.json')),b=JSON.parse(fs.readFileSync('memory-view-after.json'));assert(a.fixtureLogicalMb>60);assert(b.returnedBytes<100000);assert(a.returnedBytes>60000000);console.log(JSON.stringify({beforeRssMb:a.rssMb,afterRssMb:b.rssMb,beforeReturnedBytes:a.returnedBytes,afterReturnedBytes:b.returnedBytes}));"
       - uses: actions/upload-artifact@v4
         with:
           name: two-workers-qualification
-          path: two-workers-qualification.json
+          path: |
+            two-workers-qualification.json
+            memory-view-before.json
+            memory-view-after.json
