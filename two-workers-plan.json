@@ -1,0 +1,25 @@
+{
+  "mode": "processing-goal-fix",
+  "before": "e36664be980b71a320a3a4c31838d5e9bd7b380667d86f455a3a862af1cbcd96",
+  "after": "4326468909f7b5b6373b4b014b870a88176df8d7ec78d8cef4f4dc4af0057523",
+  "savedDetailIds": [],
+  "changed": [
+    "hourly/runner.mjs",
+    "hourly/live.mjs",
+    "hourly/main.mjs",
+    "hourly/execution.mjs",
+    "hourly/work-pool.mjs",
+    "hourly/work-pool.test.mjs",
+    "hourly/interleaved.test.mjs",
+    "hourly/execution.test.mjs",
+    "hourly/personal-mode.test.mjs",
+    "hourly/expanded-budget.test.mjs",
+    "scrappey/provider.mjs",
+    "scrappey/provider.test.mjs",
+    "scrappey/live-reader.mjs",
+    "scrappey/live-reader.test.mjs",
+    "scrappey/retry-policy.mjs",
+    "scrappey/readiness.test.mjs"
+  ],
+  "policy": "two-account-serial-delivery-slot53-v1"
+}
