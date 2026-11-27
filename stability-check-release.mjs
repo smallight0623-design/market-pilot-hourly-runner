@@ -18,6 +18,11 @@ try{
  const c={get:(k,m)=>t.getConfig(k,m),putIf:(k,b,v)=>t.putConfig(k,b,v)},current=await readVersion(c,{expectedReleaseHash:plan.before});
  const {qualifyCropRelease}=await import('./crop-release-guard.mjs');
  const cropReport=await qualifyCropRelease({plan,get,store,current});
+ if(plan.pipelineQualification){
+  const q=plan.pipelineQualification,r=await get('/actions/runs/'+q.runId);
+  if(r.status!=='completed'||r.conclusion!=='success'||r.path!=='.github/workflows/two-workers-validation.yml'||r.head_sha!==q.head||q.receipt?.status!=='verified'||q.receipt.release!==plan.after||q.receipt.tests<698||q.receipt.failed!==0)throw Error('pipeline_qualification_missing');
+  for(const k of ['sourceCalls','modelCalls','newMessages'])if(q.receipt[k]!==0)throw Error('pipeline_qualification_side_effects');
+ }
  const savedDetails=[];
  const normalised={sourceReview:[],expiredPrepared:[],incompleteDetails:[]},readinessChanges=[];
  if(plan.reclassifyDetailIds?.length){
