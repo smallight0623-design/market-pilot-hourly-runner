@@ -23,5 +23,39 @@
   "policy": "bounded-crop12-consistency8-v1",
   "targetId": "2420936455",
   "sourceSha256": "f553e1a07e0f15e19a18292469b8e28a3559da909e86b3cf9d49b1751e33800d",
-  "qualificationRequired": true
+  "qualificationRequired": true,
+  "qualificationRunId": "45964682382",
+  "qualificationHead": "cee7aa326499b5d83de3192120ceb43f94b64ce3",
+  "qualifications": {
+    "main": {
+      "status": "verified",
+      "variant": "main",
+      "appHash": "e36664be980b71a320a3a4c31838d5e9bd7b380667d86f455a3a862af1cbcd96",
+      "sourceSha256": "f553e1a07e0f15e19a18292469b8e28a3559da909e86b3cf9d49b1751e33800d",
+      "reportEvidenceHash": "291f59e23bbd337eb544e07dfde18473b02198b27906435d381b432888bbe8d2",
+      "baselineCount": 17,
+      "matches": 18,
+      "newTarget": "intake-3c4349db16423157b97f2280",
+      "cropSeconds": 1.149695720000011,
+      "negativeCases": 3,
+      "modelCalls": 0,
+      "sourceCalls": 0,
+      "newMessages": 0
+    },
+    "facebook": {
+      "status": "verified",
+      "variant": "facebook",
+      "appHash": "91fd5545202894057b261f588f636655bbda88ac7aa76356ed4aadf39394d547",
+      "sourceSha256": "f553e1a07e0f15e19a18292469b8e28a3559da909e86b3cf9d49b1751e33800d",
+      "reportEvidenceHash": "f2566054ee3a3844cf4e157250004d9d955daf25e380d6b0932f402b5908d564",
+      "baselineCount": 17,
+      "matches": 18,
+      "newTarget": "intake-3c4349db16423157b97f2280",
+      "cropSeconds": 1.3675038290000145,
+      "negativeCases": 3,
+      "modelCalls": 0,
+      "sourceCalls": 0,
+      "newMessages": 0
+    }
+  }
 }

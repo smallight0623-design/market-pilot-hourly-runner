@@ -1,19 +1,61 @@
 {
   "mode": "processing-goal-fix",
-  "before": "4a4c1fbfb3e610ed31c3b4cd3de44f006a4e979b952bfb0b40b842e3923fa93b",
-  "after": "e7a20f3cb41f245ee921fb84b81268bf203a93c1ad0dde3fb957d170bc483207",
-  "bytes": 78000472,
+  "before": "e7a20f3cb41f245ee921fb84b81268bf203a93c1ad0dde3fb957d170bc483207",
+  "after": "e36664be980b71a320a3a4c31838d5e9bd7b380667d86f455a3a862af1cbcd96",
+  "facebookBefore": "b14a0fe1e1259b1a697d21207632e1b4826c326a2d8da8df95c32055cedde543",
+  "facebookAfter": "91fd5545202894057b261f588f636655bbda88ac7aa76356ed4aadf39394d547",
   "changed": [
-    "scrappey/provider.mjs",
-    "scrappey/provider.test.mjs",
-    "scrappey/retry-policy.mjs",
-    "scrappey/live-reader.mjs",
-    "scrappey/readiness.test.mjs",
-    "scrappey/gift-gallery.test.mjs",
-    "scrappey/bridge.test.mjs"
+    "cloud-state/worker-config.mjs",
+    "recognition/adopted.py",
+    "recognition/authority.mjs",
+    "recognition/authority.test.mjs",
+    "recognition/runtime.mjs",
+    "recognition/skin-core/hybrid.py",
+    "recognition/skin-core/matcher.py",
+    "recognition/skin-core/crop_recheck.py",
+    "recognition/skin-core/test_crop_recheck.py",
+    "recognition/crop-recheck-cases.json",
+    "recognition/fixtures/dense-liliana-20261127.webp",
+    "recognition/crop_negative_acceptance.py",
+    "recognition/asset-manifest.json"
   ],
   "savedDetailIds": [],
-  "reclassifyDetailIds": [
-    "2420940736"
-  ]
+  "policy": "bounded-crop12-consistency8-v1",
+  "targetId": "2420936455",
+  "sourceSha256": "f553e1a07e0f15e19a18292469b8e28a3559da909e86b3cf9d49b1751e33800d",
+  "qualificationRequired": true,
+  "qualificationRunId": "45964682382",
+  "qualificationHead": "cee7aa326499b5d83de3192120ceb43f94b64ce3",
+  "qualifications": {
+    "main": {
+      "status": "verified",
+      "variant": "main",
+      "appHash": "e36664be980b71a320a3a4c31838d5e9bd7b380667d86f455a3a862af1cbcd96",
+      "sourceSha256": "f553e1a07e0f15e19a18292469b8e28a3559da909e86b3cf9d49b1751e33800d",
+      "reportEvidenceHash": "291f59e23bbd337eb544e07dfde18473b02198b27906435d381b432888bbe8d2",
+      "baselineCount": 17,
+      "matches": 18,
+      "newTarget": "intake-3c4349db16423157b97f2280",
+      "cropSeconds": 1.149695720000011,
+      "negativeCases": 3,
+      "modelCalls": 0,
+      "sourceCalls": 0,
+      "newMessages": 0
+    },
+    "facebook": {
+      "status": "verified",
+      "variant": "facebook",
+      "appHash": "91fd5545202894057b261f588f636655bbda88ac7aa76356ed4aadf39394d547",
+      "sourceSha256": "f553e1a07e0f15e19a18292469b8e28a3559da909e86b3cf9d49b1751e33800d",
+      "reportEvidenceHash": "f2566054ee3a3844cf4e157250004d9d955daf25e380d6b0932f402b5908d564",
+      "baselineCount": 17,
+      "matches": 18,
+      "newTarget": "intake-3c4349db16423157b97f2280",
+      "cropSeconds": 1.3675038290000145,
+      "negativeCases": 3,
+      "modelCalls": 0,
+      "sourceCalls": 0,
+      "newMessages": 0
+    }
+  }
 }

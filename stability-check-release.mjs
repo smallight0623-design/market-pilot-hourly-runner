@@ -16,6 +16,8 @@ try{
  if(op.publisherReleaseHash!==plan.before)throw Error('baseline_changed');
  if(op.lease){const job=(await get('/actions/runs/'+op.lease.runId+'/jobs')).jobs.find(j=>j.name==='hourly');if(!job||job.status!=='completed')throw Error('lease_active');}
  const c={get:(k,m)=>t.getConfig(k,m),putIf:(k,b,v)=>t.putConfig(k,b,v)},current=await readVersion(c,{expectedReleaseHash:plan.before});
+ const {qualifyCropRelease}=await import('./crop-release-guard.mjs');
+ const cropReport=await qualifyCropRelease({plan,get,store,current});
  const savedDetails=[];
  const normalised={sourceReview:[],expiredPrepared:[],incompleteDetails:[]},readinessChanges=[];
  if(plan.reclassifyDetailIds?.length){
@@ -51,8 +53,10 @@ try{
  await rebindRelease(c,{expectedOldRelease:plan.before,newRelease:plan.after,expectedHeadHash:current.head.hash});
  const checked=await readVersion(c,{expectedReleaseHash:plan.after});if(hash(checked.version.documents)!==hash(current.version.documents))throw Error('documents_changed');
  await store.transact(data=>{if(hash(data)!==hash(before.data))throw Error('state_changed');const live=data.metadata.hourly;live.publisherReleaseHash=plan.after;live.lease=null;for(const {key,patch} of readinessChanges)Object.assign(live.scrappeyRequests[key],patch);for(const id of savedDetails)live.candidates[id].status='pending';for(const id of normalised.sourceReview){const r=Object.values(live.scrappeyRequests).filter(r=>r.id===id&&['started','unknown'].includes(r.status)).sort((a,b)=>Date.parse(b.at)-Date.parse(a.at))[0];live.candidates[id].status='detail_requires_review';live.candidates[id].detailReview={diagnosticCode:r.reason??'uncertain_prior_request',at:r.at,runId:r.runId,responseEvidenceHash:r.evidenceHash??null};}for(const id of normalised.expiredPrepared){live.candidates[id].status='outside_window_or_date_unknown';live.candidates[id].archiveReason='prepared_listing_expired';}},{expectedRevision:before.revision});
+ let cropCorrection=null;
+ if(cropReport){const {refreshCropCard}=await import('./crop-card-refresh.mjs');cropCorrection=await refreshCropCard({store,t,env,plan,current:checked,report:cropReport});}
  const previous=await t.getProjection('console-projection-v1/body.json',4*1024*1024),ai=previous&&JSON.parse(previous.bytes).capabilities?.ai;
  const projection=await publishProjection({store,transport:t,env:{...env,RELAYROUTER_API_KEY:ai?'available':undefined}});
- const receipt={status:'confirmed',mode:plan.mode,release:plan.after,configurationRevision:checked.version.revision,documentsUnchanged:true,savedDetails,normalised,projection,sourceCalls:0,modelCalls:0,newMessages:0};
+ const receipt={status:'confirmed',mode:plan.mode,release:plan.after,configurationRevision:checked.version.revision,documentsUnchanged:true,cropCorrection,savedDetails,normalised,projection,sourceCalls:0,modelCalls:0,newMessages:0};
  await fs.writeFile('stability-receipt.json',JSON.stringify(receipt,null,2));console.log(JSON.stringify(receipt));
 }finally{t.close();}
