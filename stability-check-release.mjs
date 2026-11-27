@@ -8,6 +8,7 @@ const env=process.env,plan=JSON.parse(await fs.readFile('stability-plan.json'));
 if(!['projection-check-fix','processing-goal-fix'].includes(plan.mode)||env.GITHUB_ACTIONS!=='true'||env.GITHUB_REPOSITORY!=='smallight0623-design/market-pilot-hourly-runner'||createHash('sha256').update(await fs.readFile('hourly-package.zip')).digest('hex')!==plan.after)throw Error('release_context');
 const get=async path=>{const r=await fetch('https://api.github.com/repos/'+env.GITHUB_REPOSITORY+path,{headers:{Authorization:'Bearer '+env.GITHUB_TOKEN,'User-Agent':'stability-release'}});if(!r.ok)throw Error('github_'+r.status);return r.json();};
 if((await get('/actions/workflows/hourly-push.yml')).state!=='disabled_manually')throw Error('publisher_not_paused');
+if((await get('/actions/workflows/hourly-push.yml/runs?per_page=5')).workflow_runs.some(r=>r.status!=='completed'))throw Error('publisher_pipeline_active');
  for(const run of (await get('/actions/workflows/hourly-push.yml/runs?per_page=5')).workflow_runs.filter(r=>r.status!=='completed')){const jobs=(await get('/actions/runs/'+run.id+'/jobs')).jobs.filter(j=>['hourly','Facebook independent collection and publishing'].includes(j.name));if(jobs.length<2||jobs.some(j=>j.status!=='completed'))throw Error('publisher_active');}
 const t=new R2Transport({endpoint:env.R2_ENDPOINT,bucket:'market-pilot-state-trial',prefix:'i015-trial/hourly-live-v1',accessKeyId:env.R2_ACCESS_KEY_ID,secretAccessKey:env.R2_SECRET_ACCESS_KEY},{maxRequests:1500,maxUploadBytes:250*1024*1024});
 try{
