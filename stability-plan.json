@@ -1,20 +1,28 @@
 {
   "mode": "processing-goal-fix",
-  "before": "4326468909f7b5b6373b4b014b870a88176df8d7ec78d8cef4f4dc4af0057523",
-  "after": "b6ffed54db1abba9c0b260bbb414ccb774c69903761c30c53218f9be583cd58f",
+  "before": "b6ffed54db1abba9c0b260bbb414ccb774c69903761c30c53218f9be583cd58f",
+  "after": "94837bcf644baf37147da029adadc6721cb78c88cbe4847724413601ef8e9eb0",
   "savedDetailIds": [],
   "changed": [
     "cloud-state/object-store.mjs",
-    "cloud-state/write-queue.test.mjs"
+    "cloud-state/write-queue.test.mjs",
+    "hourly/work-pool.mjs",
+    "hourly/runner.mjs",
+    "hourly/live.mjs",
+    "scrappey/live-reader.mjs",
+    "scrappey/live-reader.test.mjs"
   ],
-  "policy": "shared-store-fifo-v1",
+  "policy": "bounded-provider-views-v1",
+  "detailConcurrency": 4,
+  "analysisConcurrency": 2,
+  "nodeOldSpaceMb": 6144,
   "pipelineQualification": {
-    "runId": "46019259666",
-    "head": "ccc411ab13ee4c6433c4dc7fe736aaabc44c87ed",
+    "runId": "46040043513",
+    "head": "20bd6800fb0b4f9bf10b6791096246b56f781333",
     "receipt": {
       "status": "verified",
-      "release": "b6ffed54db1abba9c0b260bbb414ccb774c69903761c30c53218f9be583cd58f",
-      "tests": 703,
+      "release": "94837bcf644baf37147da029adadc6721cb78c88cbe4847724413601ef8e9eb0",
+      "tests": 706,
       "failed": 0,
       "sourceCalls": 0,
       "modelCalls": 0,

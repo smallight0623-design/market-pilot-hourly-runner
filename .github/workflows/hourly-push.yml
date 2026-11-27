@@ -110,7 +110,8 @@ jobs:
         working-directory: app
         run: |
           result=0
-          node hourly/main.mjs > "$RUNNER_TEMP/private-run.log" 2>&1 || result=$?
+          node --max-old-space-size=6144 -e "const v8=require('v8'),os=require('os');console.log(JSON.stringify({event:'runtime_memory_limits',heapLimitMb:Math.round(v8.getHeapStatistics().heap_size_limit/2**20),memoryMb:Math.round(os.totalmem()/2**20)}));"
+          node --max-old-space-size=6144 hourly/main.mjs > "$RUNNER_TEMP/private-run.log" 2>&1 || result=$?
           RUN_EXIT_CODE="$result" PRIVATE_RUN_LOG="$RUNNER_TEMP/private-run.log" node ../hourly-diagnostic.mjs
           exit "$result"
         env:
