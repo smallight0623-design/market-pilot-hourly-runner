@@ -98,7 +98,10 @@ jobs:
           fi
       - name: Verify accepted recognition bridge
         working-directory: app
-        run: node recognition/check_bridge.mjs > "$RUNNER_TEMP/adopted-smoke.log" 2>&1
+        run: |
+          python -m unittest discover -s recognition/skin-core -p 'test_*.py' > "$RUNNER_TEMP/crop-unit.log" 2>&1
+          node --test recognition/authority.test.mjs > "$RUNNER_TEMP/crop-proof.log" 2>&1
+          node recognition/check_bridge.mjs > "$RUNNER_TEMP/adopted-smoke.log" 2>&1
         env:
           YOLO_AUTOINSTALL: 'false'
           OMP_NUM_THREADS: '2'
@@ -217,7 +220,10 @@ jobs:
           fi
       - name: Verify accepted recognition bridge
         working-directory: app
-        run: node recognition/check_bridge.mjs > "$RUNNER_TEMP/adopted-smoke.log" 2>&1
+        run: |
+          python -m unittest discover -s recognition/skin-core -p 'test_*.py' > "$RUNNER_TEMP/crop-unit.log" 2>&1
+          node --test recognition/authority.test.mjs > "$RUNNER_TEMP/crop-proof.log" 2>&1
+          node recognition/check_bridge.mjs > "$RUNNER_TEMP/adopted-smoke.log" 2>&1
         env:
           YOLO_AUTOINSTALL: 'false'
           OMP_NUM_THREADS: '2'

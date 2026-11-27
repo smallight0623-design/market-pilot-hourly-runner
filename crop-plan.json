@@ -1,0 +1,27 @@
+{
+  "mode": "processing-goal-fix",
+  "before": "e7a20f3cb41f245ee921fb84b81268bf203a93c1ad0dde3fb957d170bc483207",
+  "after": "e36664be980b71a320a3a4c31838d5e9bd7b380667d86f455a3a862af1cbcd96",
+  "facebookBefore": "b14a0fe1e1259b1a697d21207632e1b4826c326a2d8da8df95c32055cedde543",
+  "facebookAfter": "91fd5545202894057b261f588f636655bbda88ac7aa76356ed4aadf39394d547",
+  "changed": [
+    "cloud-state/worker-config.mjs",
+    "recognition/adopted.py",
+    "recognition/authority.mjs",
+    "recognition/authority.test.mjs",
+    "recognition/runtime.mjs",
+    "recognition/skin-core/hybrid.py",
+    "recognition/skin-core/matcher.py",
+    "recognition/skin-core/crop_recheck.py",
+    "recognition/skin-core/test_crop_recheck.py",
+    "recognition/crop-recheck-cases.json",
+    "recognition/fixtures/dense-liliana-20261127.webp",
+    "recognition/crop_negative_acceptance.py",
+    "recognition/asset-manifest.json"
+  ],
+  "savedDetailIds": [],
+  "policy": "bounded-crop12-consistency8-v1",
+  "targetId": "2420936455",
+  "sourceSha256": "f553e1a07e0f15e19a18292469b8e28a3559da909e86b3cf9d49b1751e33800d",
+  "qualificationRequired": true
+}
