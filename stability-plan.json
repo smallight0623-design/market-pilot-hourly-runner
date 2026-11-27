@@ -1,10 +1,19 @@
 {
   "mode": "processing-goal-fix",
-  "before": "53a0068d21d9bc78432db3e34be4efc600739f1e794fe173f66d35b14691a703",
-  "after": "4a4c1fbfb3e610ed31c3b4cd3de44f006a4e979b952bfb0b40b842e3923fa93b",
-  "bytes": 77997009,
+  "before": "4a4c1fbfb3e610ed31c3b4cd3de44f006a4e979b952bfb0b40b842e3923fa93b",
+  "after": "e7a20f3cb41f245ee921fb84b81268bf203a93c1ad0dde3fb957d170bc483207",
+  "bytes": 78000472,
   "changed": [
-    "discord-routing/registry.test.mjs"
+    "scrappey/provider.mjs",
+    "scrappey/provider.test.mjs",
+    "scrappey/retry-policy.mjs",
+    "scrappey/live-reader.mjs",
+    "scrappey/readiness.test.mjs",
+    "scrappey/gift-gallery.test.mjs",
+    "scrappey/bridge.test.mjs"
   ],
-  "savedDetailIds": []
+  "savedDetailIds": [],
+  "reclassifyDetailIds": [
+    "2420940736"
+  ]
 }

@@ -16,7 +16,20 @@ try{
  if(op.lease){const job=(await get('/actions/runs/'+op.lease.runId+'/jobs')).jobs.find(j=>j.name==='hourly');if(!job||job.status!=='completed')throw Error('lease_active');}
  const c={get:(k,m)=>t.getConfig(k,m),putIf:(k,b,v)=>t.putConfig(k,b,v)},current=await readVersion(c,{expectedReleaseHash:plan.before});
  const savedDetails=[];
- const normalised={sourceReview:[],expiredPrepared:[]};
+ const normalised={sourceReview:[],expiredPrepared:[],incompleteDetails:[]},readinessChanges=[];
+ if(plan.reclassifyDetailIds?.length){
+  const {detailReadinessFailure}=await import('./app/scrappey/provider.mjs'),{retryableDetailReply,recentRequests}=await import('./app/scrappey/retry-policy.mjs');
+  for(const id of plan.reclassifyDetailIds){
+   if(id!=='2420940736')throw Error('readiness_recovery_scope');if(op.records[id]?.messageId)continue;
+   if(op.candidates[id]?.status!=='pending')throw Error('readiness_candidate_changed');
+   const requests=recentRequests(op,id,Date.now());if(requests.some(r=>['started','unknown','blocked'].includes(r.status)))throw Error('readiness_request_held');
+   const request=requests.filter(r=>r.status==='received').at(-1);if(!request)throw Error('readiness_evidence_missing');
+   const key=Object.keys(op.scrappeyRequests).find(k=>op.scrappeyRequests[k]===request),bytes=await store.getBlob(request.evidenceHash);if(createHash('sha256').update(bytes).digest('hex')!==request.evidenceHash)throw Error('readiness_checksum');
+   const raw=JSON.parse(bytes);if(raw.id!==id||raw.observedAt!==request.at||raw.reply?.outcome!=='received')throw Error('readiness_identity');
+   const incomplete=detailReadinessFailure(raw.reply.response,{url:op.candidates[id].sourceUrl});if(!incomplete||!retryableDetailReply(incomplete))throw Error('readiness_classification_changed');
+   readinessChanges.push({key,patch:{status:'invalid',originalStatus:'received',reason:incomplete.reason,retryable:true,originStatus:200,reclassifiedAt:new Date().toISOString(),readinessRevision:'detail-readiness-v1'}});normalised.incompleteDetails.push(id);
+  }
+ }
  if(plan.mode==='processing-goal-fix'){
   const {savedDetailEligible}=await import('./app/scrappey/live-reader.mjs');
   for(const id of plan.savedDetailIds??[]){
@@ -36,7 +49,7 @@ try{
  }
  await rebindRelease(c,{expectedOldRelease:plan.before,newRelease:plan.after,expectedHeadHash:current.head.hash});
  const checked=await readVersion(c,{expectedReleaseHash:plan.after});if(hash(checked.version.documents)!==hash(current.version.documents))throw Error('documents_changed');
- await store.transact(data=>{if(hash(data)!==hash(before.data))throw Error('state_changed');const live=data.metadata.hourly;live.publisherReleaseHash=plan.after;live.lease=null;for(const id of savedDetails)live.candidates[id].status='pending';for(const id of normalised.sourceReview){const r=Object.values(live.scrappeyRequests).filter(r=>r.id===id&&['started','unknown'].includes(r.status)).sort((a,b)=>Date.parse(b.at)-Date.parse(a.at))[0];live.candidates[id].status='detail_requires_review';live.candidates[id].detailReview={diagnosticCode:r.reason??'uncertain_prior_request',at:r.at,runId:r.runId,responseEvidenceHash:r.evidenceHash??null};}for(const id of normalised.expiredPrepared){live.candidates[id].status='outside_window_or_date_unknown';live.candidates[id].archiveReason='prepared_listing_expired';}},{expectedRevision:before.revision});
+ await store.transact(data=>{if(hash(data)!==hash(before.data))throw Error('state_changed');const live=data.metadata.hourly;live.publisherReleaseHash=plan.after;live.lease=null;for(const {key,patch} of readinessChanges)Object.assign(live.scrappeyRequests[key],patch);for(const id of savedDetails)live.candidates[id].status='pending';for(const id of normalised.sourceReview){const r=Object.values(live.scrappeyRequests).filter(r=>r.id===id&&['started','unknown'].includes(r.status)).sort((a,b)=>Date.parse(b.at)-Date.parse(a.at))[0];live.candidates[id].status='detail_requires_review';live.candidates[id].detailReview={diagnosticCode:r.reason??'uncertain_prior_request',at:r.at,runId:r.runId,responseEvidenceHash:r.evidenceHash??null};}for(const id of normalised.expiredPrepared){live.candidates[id].status='outside_window_or_date_unknown';live.candidates[id].archiveReason='prepared_listing_expired';}},{expectedRevision:before.revision});
  const previous=await t.getProjection('console-projection-v1/body.json',4*1024*1024),ai=previous&&JSON.parse(previous.bytes).capabilities?.ai;
  const projection=await publishProjection({store,transport:t,env:{...env,RELAYROUTER_API_KEY:ai?'available':undefined}});
  const receipt={status:'confirmed',mode:plan.mode,release:plan.after,configurationRevision:checked.version.revision,documentsUnchanged:true,savedDetails,normalised,projection,sourceCalls:0,modelCalls:0,newMessages:0};
