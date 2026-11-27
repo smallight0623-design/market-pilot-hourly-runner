@@ -1,0 +1,16 @@
+name: Offline Node memory limits
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: |
+          node -e "const os=require('os'),v8=require('v8');console.log(JSON.stringify({mode:'default',node:process.version,cpu:os.cpus().length,memoryGb:os.totalmem()/2**30,heapLimitMb:v8.getHeapStatistics().heap_size_limit/2**20}));"
+          node --max-old-space-size=4096 -e "console.log(JSON.stringify({mode:'explicit4096',heapLimitMb:require('v8').getHeapStatistics().heap_size_limit/2**20}));"
