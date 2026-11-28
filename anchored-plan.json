@@ -18,5 +18,35 @@
   "after": "1a251e84eb7f097281e876e84fa0c8b4ebc916d55a21599a867575da6ce9bd80",
   "facebookBefore": "91fd5545202894057b261f588f636655bbda88ac7aa76356ed4aadf39394d547",
   "facebookAfter": "0786d183b74dc110e506065b620b3c213e4b7e14daba4c72f8b56863da18f591",
-  "evidenceHash": "5c391bcb1626e7126dd532f3d8ed75b88ee45fd24b140264f4c02febf6e626d8"
+  "evidenceHash": "5c391bcb1626e7126dd532f3d8ed75b88ee45fd24b140264f4c02febf6e626d8",
+  "qualificationRun": "46139779318",
+  "qualificationHead": "8eafcc011d1fd986285ab94afe0de505a1fcff26",
+  "qualifications": {
+    "main": {
+      "status": "verified",
+      "variant": "main",
+      "appHash": "1a251e84eb7f097281e876e84fa0c8b4ebc916d55a21599a867575da6ce9bd80",
+      "tests": 715,
+      "failed": 0,
+      "reportEvidenceHash": "35910c47638b2637266a0e5aafb5cec10a936ffab28fe3d53cba04b47b8377e4",
+      "positiveCases": 2,
+      "negativeCases": 3,
+      "sourceCalls": 0,
+      "modelCalls": 0,
+      "newMessages": 0
+    },
+    "facebook": {
+      "status": "verified",
+      "variant": "facebook",
+      "appHash": "0786d183b74dc110e506065b620b3c213e4b7e14daba4c72f8b56863da18f591",
+      "tests": 179,
+      "failed": 0,
+      "reportEvidenceHash": "2a4b19a6f44be13e3b88ed7ccffc0a3f85980759105e43f4890e5722c1597322",
+      "positiveCases": 2,
+      "negativeCases": 3,
+      "sourceCalls": 0,
+      "modelCalls": 0,
+      "newMessages": 0
+    }
+  }
 }
