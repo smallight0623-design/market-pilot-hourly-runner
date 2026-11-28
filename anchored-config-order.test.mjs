@@ -1,0 +1,9 @@
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';
+import{baseVersion,readVersion,publishVersion,rebindRelease,hash}from'./app/configuration/versions.mjs';import{loadPricing}from'./app/pricing-model.mjs';
+test('release rebinding precedes resource document publication and preserves price rules',async()=>{
+ const values=new Map(),transport={async get(k){return values.get(k)??null;},async putIf(k,bytes,c){const old=values.get(k);if(c.absent&&old||c.etag&&c.etag!==old?.etag)throw Object.assign(Error('conflict'),{code:'precondition_failed'});values.set(k,{bytes:Buffer.from(bytes),etag:hash(bytes)});}},pricing=loadPricing(),documents={model:pricing.model,tiers:pricing.tiers,library:JSON.parse(fs.readFileSync('app/I015-統一資源庫/資源庫匯出.json','utf8'))},before='a'.repeat(64),after='b'.repeat(64);
+ await publishVersion(transport,baseVersion(documents,before));let current=await readVersion(transport);const desired=structuredClone(documents);desired.library.entries[0].enabled=!desired.library.entries[0].enabled;
+ const proposal=()=>({version:1,revision:current.version.revision+1,releaseHash:after,documentHash:hash(desired),documents:desired,parent:{revision:current.version.revision,hash:current.head.hash},change:{id:'offline-order',at:new Date().toISOString(),scope:'resource_reference_repair',operations:[],diff:[]}});
+ await assert.rejects(publishVersion(transport,proposal(),{current}),/config_parent_changed/);assert.equal((await readVersion(transport)).version.releaseHash,before);
+ await rebindRelease(transport,{expectedOldRelease:before,newRelease:after,expectedHeadHash:current.head.hash});current=await readVersion(transport);await publishVersion(transport,proposal(),{current});const v=(await readVersion(transport)).version;assert.equal(v.releaseHash,after);assert.deepEqual(v.documents,desired);assert.deepEqual(v.documents.model,documents.model);assert.deepEqual(v.documents.tiers,documents.tiers);
+});

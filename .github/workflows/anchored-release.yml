@@ -46,6 +46,8 @@ jobs:
           t.reserve('console-projection-v1/workbench-a.json',0,true);
           t.reserve('console-projection-v1/workbench-b.json',0,true);
           JS
+      - name: Verify guarded configuration publication order
+        run: node --test anchored-config-order.test.mjs
       - name: Wait for the current 8591 publisher to finish
         env:
           GITHUB_TOKEN: ${{ github.token }}
