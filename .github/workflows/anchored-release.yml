@@ -1,0 +1,74 @@
+name: Approved collection retry and console stability repair
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: market-pilot-explicit-release
+  cancel-in-progress: false
+jobs:
+  repair:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Load approved immutable application
+        run: |
+          SHA=$(node -p "JSON.parse(require('fs').readFileSync('anchored-plan.json')).after")
+          APPROVED_PACKAGE_SHA="$SHA" node bootstrap.mjs
+        env:
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
+      - name: Verify application and retry rules
+        run: |
+          python - <<'PY'
+          import pathlib,zipfile,hashlib,json
+          with zipfile.ZipFile('hourly-package.zip') as z:
+              for i in z.infolist():
+                  p=pathlib.PurePosixPath(i.filename)
+                  assert not p.is_absolute() and '..' not in p.parts and ':' not in i.filename and chr(92) not in i.filename
+                  assert p.name!='.env' and 'node_modules' not in p.parts
+                  assert (i.external_attr >> 16) & 0o170000 != 0o120000
+              z.extractall('app')
+          root=pathlib.Path('app');manifest=json.loads((root/'recognition-release-manifest.json').read_bytes())
+          for n,h in manifest['files'].items():assert hashlib.sha256((root/n).read_bytes()).hexdigest()==h
+          PY
+          node --test app/scrappey/*.test.mjs app/projection-summary-budget.test.mjs app/configuration/console-projection.test.mjs app/hourly/interleaved.test.mjs app/gifts/*.test.mjs app/discord-routing/*.test.mjs
+          node --input-type=module <<'JS'
+          import {R2Transport} from './app/cloud-state/r2-transport.mjs';
+          const t=new R2Transport({endpoint:'https://'+'a'.repeat(32)+'.r2.cloudflarestorage.com',bucket:'market-pilot-state-trial',prefix:'i015-trial/hourly-live-v1',accessKeyId:'test',secretAccessKey:'test'},{client:{destroy(){}}});
+          t.reserve('console-projection-v1/workbench-a.json',0,true);
+          t.reserve('console-projection-v1/workbench-b.json',0,true);
+          JS
+      - name: Wait for the current 8591 publisher to finish
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          node --input-type=module <<'JS'
+          const get=async(path)=>{const r=await fetch('https://api.github.com/repos/'+process.env.GITHUB_REPOSITORY+path,{headers:{Authorization:'Bearer '+process.env.GITHUB_TOKEN,'User-Agent':'release-wait'},signal:AbortSignal.timeout(15000)});if(!r.ok)throw Error('github_read_'+r.status);return r.json();};
+          const deadline=Date.now()+33*60*1000;
+          for(;;){const active=(await get('/actions/workflows/hourly-push.yml/runs?per_page=5')).workflow_runs.some(r=>r.status!=='completed');if(!active)break;if(Date.now()>deadline)throw Error('publisher_wait_expired');await new Promise(resolve=>setTimeout(resolve,30000));}
+          console.log('Existing 8591 publisher finished.');
+          JS
+      - name: Apply release, restore saved details and repair existing card
+        run: |
+          node anchored-release.mjs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
+          DISCORD_ROUTING_KEY: ${{ secrets.DISCORD_ROUTING_KEY }}
+          DISCORD_APPLICATION_ID: '1563256161707364382'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: anchored-release-receipt
+          path: anchored-release-receipt.json
+          if-no-files-found: ignore

@@ -1,0 +1,22 @@
+{
+  "mode": "processing-goal-fix",
+  "policy": "verified-anchored-rows-v1",
+  "savedDetailIds": [],
+  "changed": [
+    "recognition/skin-core/anchored_rows.py",
+    "recognition/skin-core/test_anchored_rows.py",
+    "recognition/skin-core/hybrid.py",
+    "recognition/adopted.py",
+    "recognition/runtime.mjs",
+    "recognition/authority.test.mjs",
+    "recognition/anchored_acceptance.py",
+    "recognition/anchored-cases.json",
+    "recognition/fixtures/2420954288-rows.webp",
+    "recognition/fixtures/2420954304-rows.webp"
+  ],
+  "before": "8483b7e6187f5f9af67415d27a6867799ad4b00d6c299a413fcf05e414c4a77b",
+  "after": "1a251e84eb7f097281e876e84fa0c8b4ebc916d55a21599a867575da6ce9bd80",
+  "facebookBefore": "91fd5545202894057b261f588f636655bbda88ac7aa76356ed4aadf39394d547",
+  "facebookAfter": "0786d183b74dc110e506065b620b3c213e4b7e14daba4c72f8b56863da18f591",
+  "evidenceHash": "5c391bcb1626e7126dd532f3d8ed75b88ee45fd24b140264f4c02febf6e626d8"
+}

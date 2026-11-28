@@ -1,0 +1,68 @@
+name: Offline anchored recheck Linux qualification
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: market-pilot-anchored-qualification
+  cancel-in-progress: false
+jobs:
+  qualify:
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [main, facebook]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Load immutable candidate
+        run: |
+          SHA=$(node -p "JSON.parse(require('fs').readFileSync('anchored-plan.json'))['${{ matrix.variant }}' === 'main' ? 'after' : 'facebookAfter']")
+          APPROVED_PACKAGE_SHA="$SHA" node bootstrap.mjs
+          python - <<'PY'
+          import zipfile,pathlib,json,hashlib
+          with zipfile.ZipFile('hourly-package.zip') as z:
+              assert sum(x.file_size for x in z.infolist()) < 192*1024*1024
+              for x in z.infolist():
+                  p=pathlib.PurePosixPath(x.filename)
+                  assert not p.is_absolute() and '..' not in p.parts and chr(92) not in x.filename and ':' not in x.filename
+                  assert p.name!='.env' and 'node_modules' not in p.parts and (x.external_attr >> 16) & 0o170000 != 0o120000
+              z.extractall('app')
+          root=pathlib.Path('app');m=json.loads((root/'recognition-release-manifest.json').read_bytes())
+          for name,sha in m['files'].items():assert hashlib.sha256((root/name).read_bytes()).hexdigest()==sha
+          PY
+        env:
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: app/recognition/requirements-linux.txt
+      - name: Install matching runtime only
+        run: python -m pip install 'numpy==2.5.4' 'Pillow==13.0.0' 'opencv-python==5.0.0.93'
+      - name: Check process deadlines and source proof contracts
+        run: |
+          python -m unittest discover -s app/recognition/skin-core -p 'test_*.py'
+          node --test app/recognition/authority.test.mjs app/cloud-state/model-compatibility.test.mjs
+      - name: Verify target and hard negatives with the actual live reference bank
+        run: node anchored-candidate-check.mjs
+        env:
+          ANCHORED_VARIANT: ${{ matrix.variant }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_TRIAL_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_TRIAL_SECRET_ACCESS_KEY }}
+          YOLO_AUTOINSTALL: 'false'
+          OMP_NUM_THREADS: '2'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: anchored-qualification-${{ matrix.variant }}
+          path: anchored-qualification.json
+          if-no-files-found: ignore
